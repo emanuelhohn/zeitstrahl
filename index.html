@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 1.2.2 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 1.3.1 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="1.2.2">
+<meta name="version" content="1.3.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -53,6 +53,14 @@ body.filemode #admin{opacity:1}
 #fileStatus{font-size:.8rem;color:var(--mute);white-space:nowrap}
 #fileStatus.dirty{color:var(--danger);font-weight:600}
 button{touch-action:manipulation}
+#searchbar{position:fixed;right:1rem;z-index:30;display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem .4rem .8rem;background:var(--panel);border:1px solid var(--line);border-radius:.6rem;box-shadow:var(--shadow)}
+#searchbar:focus-within{border-color:var(--accent)}
+#searchbar input{border:0;outline:0;background:none;font:inherit;color:var(--ink);width:14rem;padding:.2rem 0}
+#qcount{font-size:.8rem;color:var(--mute);white-space:nowrap;min-width:5.5rem;text-align:right}
+#qcount.none{color:var(--danger);font-weight:600}
+#searchbar button{border:0;background:none;cursor:pointer;font-size:1.05rem;line-height:1;color:var(--mute);padding:.15rem .3rem}
+#searchbar button:hover{color:var(--ink)}
+@media (pointer:coarse){#searchbar input{font-size:16px}}
 @supports (height:100dvh){body{height:100dvh}}
 @media (pointer:coarse){.form input[type=text],.form textarea,.form select,#storySel{font-size:16px}}
 #status{font-size:.8rem;color:var(--mute);white-space:nowrap}
@@ -214,6 +222,7 @@ button{touch-action:manipulation}
     <button class="btn" id="zOut" title="Verkleinern (–)">−</button>
     <button class="btn" id="zIn" title="Vergrössern (+)">+</button>
     <button class="btn" id="zAll" title="Alles zeigen (0)">Alles</button>
+    <button class="btn" id="btnSearch" title="Suche (/)" aria-label="Suche"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 10l4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   </div>
   <div class="grp" id="admin" hidden>
     <span id="status"></span>
@@ -257,6 +266,7 @@ button{touch-action:manipulation}
 </div>
 
 <footer id="caption" class="hint"></footer>
+<div id="searchbar" hidden><input type="text" id="q" placeholder="Suchen …" autocomplete="off" enterkeyhint="search" aria-label="Suche"><span id="qcount"></span><button id="qprev" title="Vorheriger Treffer (Umschalt+Enter)" aria-label="Vorheriger Treffer">↑</button><button id="qnext" title="Nächster Treffer (Enter)" aria-label="Nächster Treffer">↓</button><button id="qx" title="Suche beenden (Esc)" aria-label="Suche beenden">✕</button></div>
 <div id="tip" hidden></div>
 <div id="detail" hidden><div id="sheet"></div></div>
 <div id="editor" hidden><div id="edsheet" class="form"></div></div>
@@ -268,7 +278,7 @@ button{touch-action:manipulation}
 <script>
 'use strict';
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '1.2.2', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+const VERSION = '1.3.1', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
 /* ========== Hilfen ========== */
 const $ = s => document.querySelector(s);
 const el = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
@@ -276,7 +286,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const pad2 = n => String(n).padStart(2, '0');
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const hint = () => '← → blättern · Enter Details · Strg + Scrollen oder + / − zoomen · 0 Überblick · B Achse/Bahnen' +
-  ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · T hell/dunkel · F Vollbild';
+  ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · / Suche · T hell/dunkel · F Vollbild';
 const HINT_EDIT = 'Bearbeiten: Klick auf Karte = bearbeiten · Doppelklick auf Zeitstrahl = neues Ereignis · N neu · E ausgewähltes bearbeiten';
 const PALETTE = ['#c8452f','#2b59c3','#1e7a4f','#9a6a00','#7b4fb0','#0f8b9a','#c2185b','#5b6770'];
 const MAXCATS = 8;
@@ -567,7 +577,7 @@ function recomputeSpan(){
 }
 function setData(src, data){
   assetCache.clear(); thumbCache.clear();
-  S.src = src; S.data = data; S.hidden.clear(); S.sel = null; S.det = null; S.bakDone = false; S.story = null;
+  S.src = src; S.data = data; S.hidden.clear(); S.sel = null; S.det = null; S.bakDone = false; S.story = null; S.search = null; S.noteCache = null; $('#searchbar').hidden = true; $('#q').value = '';
   data.kategorien = data.kategorien || []; data.events = data.events || []; data.stories = data.stories || [];
   data.events.forEach(e => { if (!e.id) e.id = uniqueId(slug(e.titel)); });
   try { S.view = localStorage.getItem('zeitstrahl-view:' + src.name) === 'bahnen' ? 'bahnen' : 'achse'; } catch { S.view = 'achse'; }
@@ -604,6 +614,7 @@ function buildLegend(){
 function refresh(){
   const vp = $('#viewport'), midDay = xToDay(vp.scrollLeft + vp.clientWidth / 2), top = vp.scrollTop, selId = S.sel && S.sel.id;
   const p = prepare(S.data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; reindex();
+  S.noteCache = null;
   S.data.events.sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
   recomputeSpan(); S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd));
   S.sel = S.events.find(e => e.id === selId) || null;
@@ -684,7 +695,7 @@ function layout(){
   updateMetrics();
   S.pad = Math.round(vpW() * .35);
   /* Im Story-Modus zählt die Kategorie-Filterung nicht — die Story darf über alle Kategorien gehen */
-  const vis = S.vis = S.events.filter(e => S.story || !S.hidden.has(e.kat));
+  const vis = S.vis = S.events.filter(e => S.story || S.search || !S.hidden.has(e.kat));
   const W = Math.ceil((S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
   st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
   const frag = document.createDocumentFragment(); let H;
@@ -712,7 +723,7 @@ function layout(){
     const dotY = axisTop + .5 * rem + 2; S.axisY = dotY;
     for (const e of vis){
       const up = e.lane % 2 === 0, lvl = e.lane >> 1, col = colOf(e);
-      const dim = S.story && !S.story.set.has(e.id);
+      const dim = isDim(e);
       const top = up ? axisTop - (lvl + 1) * (CH + GAP) : axisTop + BAND + lvl * (CH + GAP);
       const sty = el('div', 'stem' + (dim ? ' dim' : '')); sty.style.setProperty('--c', col); sty.style.left = (e.x - 1) + 'px';
       if (up){ sty.style.top = (top + CH) + 'px'; sty.style.height = (dotY - top - CH) + 'px'; }
@@ -755,7 +766,7 @@ function layout(){
       const lab = el('div', 'lane-label'); lab.style.setProperty('--c', col); lab.style.top = (y - BAND + 6) + 'px'; lab.textContent = g.c.name; lw.append(lab);
       S.lanes.push({ id:g.c.id, y, h });
       for (const e of g.evs){
-        const dim = S.story && !S.story.set.has(e.id);
+        const dim = isDim(e);
         const top = y + extra / 2 + GAP + e.lvl * (CH + GAP);
         if (e.b){ const sp = el('div', 'span' + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
           sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (top + CH + 2) + 'px'; sp.style.zIndex = 2; frag.append(sp); }
@@ -875,10 +886,11 @@ function syncZoomLabel(){
 function select(e, center = true){
   if (S.sel && S.sel.el) S.sel.el.classList.remove('sel');
   S.sel = e; caption(e);
+  if (S.search && e){ S.search.idx = S.search.ids.indexOf(e.id); updateSearchCount(); }
   if (e && e.el){ e.el.classList.add('sel'); if (center) e.el.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' }); }
 }
 /* Bei aktiver Story springen die Pfeiltasten nur durch deren Ereignisse, sonst durch alle sichtbaren */
-function stepList(){ return S.story ? S.story.ids.map(id => S.byId[id]).filter(Boolean) : S.vis; }
+function stepList(){ const s = S.search || S.story; return s ? s.ids.map(id => S.byId[id]).filter(Boolean) : S.vis; }
 function step(dir){
   const v = stepList(); if (!v.length) return;
   let i = S.sel ? v.indexOf(S.sel) : -1;
@@ -1014,12 +1026,12 @@ async function openEditor(ev, pre = {}){
   const sh = $('#edsheet');
   sh.innerHTML = `<button class="sheet-x" id="f-x" aria-label="Schliessen">✕</button>
     <h2>${isNew ? 'Neues Ereignis' : 'Ereignis bearbeiten'}</h2>
-    <label>Titel</label><input type="text" id="f-titel" autocomplete="off">
+    <label>Titel</label><input type="text" id="f-titel" autocomplete="off" enterkeyhint="done">
     <div class="row">
-      <div><label>Datum (z.B. 7.10.2023 · 10.2023 · 476 · bei v. Chr. nur das Jahr)</label><input type="text" id="f-datum" autocomplete="off">
+      <div><label>Datum (z.B. 7.10.2023 · 10.2023 · 476 · bei v. Chr. nur das Jahr)</label><input type="text" id="f-datum" autocomplete="off" enterkeyhint="done">
         <label class="chk"><input type="checkbox" id="f-bc">v. Chr.</label>
         <div class="hintline" id="h-datum"></div></div>
-      <div><label>Ende (optional, macht einen Zeitraum)</label><input type="text" id="f-ende" autocomplete="off">
+      <div><label>Ende (optional, macht einen Zeitraum)</label><input type="text" id="f-ende" autocomplete="off" enterkeyhint="done">
         <label class="chk"><input type="checkbox" id="f-ende-bc">v. Chr.</label>
         <label class="chk"><input type="checkbox" id="f-ongoing">Läuft noch (bis heute)</label>
         <div class="hintline" id="h-ende"></div></div>
@@ -1031,7 +1043,7 @@ async function openEditor(ev, pre = {}){
     <div class="drop" id="f-drop"><div id="f-img"></div><div>Bild hierher ziehen, mit Strg+V einfügen oder klicken</div></div>
     <div style="margin-top:.4rem;display:flex;gap:.4rem"><button class="mini" id="f-imgstd" hidden>Standardbild</button><button class="mini" id="f-imgnone">Kein Bild</button></div>
     <input type="file" id="f-file" accept="image/*" hidden>
-    <label>Quelle (Link oder Text)</label><input type="text" id="f-quelle" autocomplete="off">
+    <label>Quelle (Link oder Text)</label><input type="text" id="f-quelle" autocomplete="off" enterkeyhint="done">
     <label>Notiz (Markdown)</label>
     <div class="tabs"><button class="on" id="t-write">Schreiben</button><button id="t-prev">Vorschau</button></div>
     <textarea id="f-notiz" placeholder="# Überschrift&#10;Text …&#10;Bilder: hineinziehen oder mit Strg+V einfügen."></textarea>
@@ -1139,7 +1151,7 @@ function openSettings(){
 function renderSettings(){
   const sh = $('#setsheet'), used = id => S.data.events.filter(e => e.kategorie === id).length;
   sh.innerHTML = `<button class="sheet-x" id="s-x" aria-label="Schliessen">✕</button><h2>Zeitstrahl-Einstellungen</h2>
-    <label>Titel</label><input type="text" id="s-titel">
+    <label>Titel</label><input type="text" id="s-titel" enterkeyhint="done">
     <label>Kartengrösse</label>
     <div class="seg" id="s-size" style="width:max-content"><button type="button" data-s="normal">Normal</button><button type="button" data-s="gross">Gross</button></div>
     <div class="hintline">Gross = breitere und höhere Karten mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.</div>
@@ -1152,7 +1164,7 @@ function renderSettings(){
   SET.cats.forEach((c, i) => {
     const r = el('div', 'catrow'); const sws = el('div', 'sws');
     PALETTE.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; renderSettings(); }; sws.append(b); });
-    const inp = el('input'); inp.type = 'text'; inp.value = c.name; inp.oninput = () => c.name = inp.value;
+    const inp = el('input'); inp.type = 'text'; inp.setAttribute('enterkeyhint', 'done'); inp.value = c.name; inp.oninput = () => c.name = inp.value;
     const up = el('button', 'mini'); up.textContent = '↑'; up.disabled = i === 0; up.onclick = () => { [SET.cats[i-1], SET.cats[i]] = [SET.cats[i], SET.cats[i-1]]; renderSettings(); };
     const dn = el('button', 'mini'); dn.textContent = '↓'; dn.disabled = i === SET.cats.length - 1; dn.onclick = () => { [SET.cats[i+1], SET.cats[i]] = [SET.cats[i], SET.cats[i+1]]; renderSettings(); };
     const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = c.id && used(c.id) ? `${used(c.id)} Ereignis(se) verlieren ihre Kategorie` : 'Entfernen';
@@ -1188,6 +1200,7 @@ function syncStorySelect(){
   sel.classList.toggle('active', !!S.story);
 }
 function activateStory(id){
+  if (S.search) closeSearch(false);
   const story = id ? (S.data.stories || []).find(s => s.id === id) : null;
   S.story = story ? { id: story.id, name: story.name,
     ids: story.events.filter(x => S.byId[x]).sort((a, b) => S.byId[a].pos - S.byId[b].pos), set: new Set(story.events) } : null;
@@ -1233,7 +1246,7 @@ function renderStories(){
   } else {
     const ev = STO.editing; let onlySel = false;
     sh.innerHTML = `<button class="sheet-x" id="st-x" aria-label="Schliessen">✕</button><h2>${ev.id ? 'Story bearbeiten' : 'Neue Story'}</h2>
-      <label>Name</label><input type="text" id="st-name">
+      <label>Name</label><input type="text" id="st-name" enterkeyhint="done">
       <label>Ereignisse (chronologisch — Häkchen setzen, was zur Story gehört)</label>
       <input type="text" id="st-search" placeholder="Suchen nach Titel oder Jahr …" autocomplete="off">
       <div id="st-catfilter" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem"></div>
@@ -1394,12 +1407,21 @@ $('#mTheme').onclick = () => { $('#menu').hidden = true; toggleTheme(); };
 $('#mFs').onclick = () => { $('#menu').hidden = true; toggleFs(); };
 
 /* ========== Tastatur, Rad, Fenster ========== */
+/* iPad/Handy: Enter in einem einzeiligen Eingabefeld der Formulare blendet die Bildschirmtastatur aus (am Laptop unverändert) */
+function blurOnEnter(ev){
+  const t = ev.target;
+  if (ev.key !== 'Enter' || ev.isComposing || ev.ctrlKey || ev.metaKey || !t || t.tagName !== 'INPUT' || t.type !== 'text' || !t.closest || !t.closest('.form')) return;
+  if (!matchMedia('(hover:none)').matches) return;
+  ev.preventDefault(); t.blur();
+}
+document.addEventListener('keydown', blurOnEnter);
 document.addEventListener('keydown', ev => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || ev.target.isContentEditable) return;
   if (ev.metaKey || ev.ctrlKey || ev.altKey || !S.data) return;
   if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden) return;
   const k = ev.key, vp = $('#viewport');
-  if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else select(null, false); }
+  if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else if (S.search || !$('#searchbar').hidden) closeSearch(); else select(null, false); }
+  else if (k === '/' && !S.det){ ev.preventDefault(); openSearch(); }
   else if (k === 'ArrowRight' || k === 'ArrowLeft'){ ev.preventDefault(); step(k === 'ArrowRight' ? 1 : -1); if (S.det && S.sel) openDetail(S.sel); }
   else if (k === 'Enter' && S.sel && !S.det){ ev.preventDefault(); openDetail(S.sel); }
   else if ((k === 'e' || k === 'E') && S.editing && S.sel){ ev.preventDefault(); openEditor(S.sel); }
@@ -1437,6 +1459,68 @@ function toggleTheme(){
 }
 function toggleFs(){ if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
 try { const t = localStorage.getItem('zeitstrahl-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+
+/* ========== Suche ========== */
+/* Treffer bleiben voll sichtbar, der Rest wird gedimmt (wie bei Stories); Enter / Pfeile springen von Treffer zu Treffer.
+   Durchsucht werden Titel, Beschreibung, Datum, Kategorie, Quelle und die Notizen (beim ersten Suchen geladen). */
+/* gross/klein und Akzente egal; «ae/oe/ue» zählt wie «ä/ö/ü» (beide Seiten gleich behandelt, also ohne Umlaut-Tastatur auffindbar) */
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u00df/g, 'ss').replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u');
+const isDim = e => S.search ? !S.search.set.has(e.id) : !!(S.story && !S.story.set.has(e.id));
+const hayOf = e => e._hay || (e._hay = norm([e.titel, e.beschreibung, fmtEvent(e), e.datum, e.ende && e.ende !== 'heute' ? e.ende : '', (S.cats[e.kat] || {}).name, e.quelle].filter(Boolean).join(' \n ')));
+async function loadNotes(){
+  if (S.noteCache) return S.noteCache;
+  const m = new Map(), list = S.events.filter(e => e.notiz);
+  for (let i = 0; i < list.length; i += 40)
+    await Promise.all(list.slice(i, i + 40).map(async e => { try { m.set(e.id, norm(await S.src.text(e.notiz))); } catch {} }));
+  return S.noteCache = m;
+}
+const findHits = (terms, notes) => S.events.filter(e => { const h = hayOf(e), n = (notes && notes.get(e.id)) || ''; return terms.every(t => h.includes(t) || n.includes(t)); }).map(e => e.id);
+let qTimer = 0, qSeq = 0;
+function setSearch(q, terms, ids, idx){ S.search = { q, terms, ids, set: new Set(ids), idx }; layout(); updateSearchCount(); }
+async function runSearch(q){
+  qTimer = 0; const my = ++qSeq, terms = norm(q).split(/\s+/).filter(Boolean);
+  if (!terms.length){ if (S.search){ S.search = null; layout(); } updateSearchCount(); return; }
+  const ids = findHits(terms, S.noteCache);                                   // sofort, ohne Notizen falls noch nicht geladen
+  setSearch(q, terms, ids, -1);
+  const vp = $('#viewport'), mid = vp.scrollLeft + vp.clientWidth / 2;       // den Treffer ansteuern, der der Bildmitte am nächsten liegt
+  const best = ids.map(id => S.byId[id]).filter(e => e && e.x != null).sort((a, b) => Math.abs(a.x - mid) - Math.abs(b.x - mid))[0];
+  if (best) select(best);
+  if (!S.noteCache){
+    const notes = await loadNotes(); if (my !== qSeq || !S.search) return;
+    const ids2 = findHits(terms, notes);
+    if (ids2.join() !== ids.join()) setSearch(q, terms, ids2, S.sel ? ids2.indexOf(S.sel.id) : -1);
+  }
+}
+function updateSearchCount(){
+  const c = $('#qcount'), s = S.search;
+  if (!s){ c.textContent = ''; c.className = ''; return; }
+  const n = s.ids.length; c.className = n ? '' : 'none';
+  c.textContent = !n ? 'Keine Treffer' : s.idx >= 0 ? `${s.idx + 1} von ${n}` : `${n} Treffer`;
+}
+function openSearch(){
+  if (!S.data) return;
+  $('#searchbar').style.top = ($('#viewport').getBoundingClientRect().top + 8) + 'px'; $('#searchbar').hidden = false;
+  const q = $('#q'); q.focus(); q.select();
+}
+function closeSearch(relayout = true){
+  $('#searchbar').hidden = true; $('#q').value = ''; clearTimeout(qTimer); qTimer = 0; qSeq++;
+  const had = !!S.search; S.search = null; updateSearchCount();
+  if (relayout && had && S.data) layout();
+}
+function searchStep(dir){
+  const s = S.search; if (!s || !s.ids.length) return;
+  const n = s.ids.length; let i = s.idx; i = i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n;
+  select(S.byId[s.ids[i]]);
+}
+$('#q').oninput = () => { clearTimeout(qTimer); qTimer = setTimeout(() => runSearch($('#q').value), 150); };
+$('#q').onkeydown = ev => {
+  if (ev.key === 'Enter'){ ev.preventDefault(); if (qTimer){ clearTimeout(qTimer); runSearch($('#q').value); } else searchStep(ev.shiftKey ? -1 : 1); }
+  else if (ev.key === 'ArrowDown'){ ev.preventDefault(); searchStep(1); }
+  else if (ev.key === 'ArrowUp'){ ev.preventDefault(); searchStep(-1); }
+  else if (ev.key === 'Escape'){ ev.preventDefault(); closeSearch(); }
+};
+$('#qx').onclick = () => closeSearch(); $('#qnext').onclick = () => searchStep(1); $('#qprev').onclick = () => searchStep(-1);
+$('#btnSearch').onclick = () => $('#searchbar').hidden ? openSearch() : closeSearch();
 
 /* ========== Warnung, wenn der Zeitstrahl von einer neueren App-Version stammt ========== */
 const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);

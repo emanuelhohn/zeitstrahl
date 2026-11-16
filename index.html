@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 1.3.1 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 1.5 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="1.3.1">
+<meta name="version" content="1.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -63,8 +63,10 @@ button{touch-action:manipulation}
 @media (pointer:coarse){#searchbar input{font-size:16px}}
 @supports (height:100dvh){body{height:100dvh}}
 @media (pointer:coarse){.form input[type=text],.form textarea,.form select,#storySel{font-size:16px}}
-#status{font-size:.8rem;color:var(--mute);white-space:nowrap}
-#status.err{color:var(--danger);font-weight:600}
+/* Statusmeldungen (Gespeichert, Export, Beispiel-Hinweis, Fehler): schwebend unten in der Mitte, verschieben nichts */
+#status{position:fixed;left:50%;bottom:5.2rem;transform:translateX(-50%);z-index:35;max-width:92vw;padding:.3rem .85rem;border-radius:.5rem;background:var(--ink);color:var(--bg);font-size:.85rem;box-shadow:var(--shadow);white-space:nowrap;pointer-events:none}
+#status:empty{display:none}
+#status.err{background:var(--danger);color:#fff;font-weight:600}
 #menu{position:fixed;top:3.2rem;right:1rem;z-index:45;background:var(--panel);border:1px solid var(--line);border-radius:.5rem;
   box-shadow:var(--shadow);padding:.3rem;min-width:15rem}
 #menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:.5rem .8rem;border-radius:.3rem;cursor:pointer}
@@ -109,7 +111,7 @@ button{touch-action:manipulation}
 .bahnen .tile .ty{font-size:1.05rem}.bahnen .tile .ty.s{font-size:.9rem}.bahnen .tile .ty.xs{font-size:.75rem}
 .bahnen .tile .tz{font-size:.62rem}
 .bahnen .card .t{-webkit-line-clamp:2;font-size:.92rem}
-/* Kartengrösse «gross» (Einstellung) */
+/* Anzeigegrösse «gross» (Einstellung) */
 .gross .card .t{font-size:1.15rem}.gross .card .d{font-size:.88rem}
 .gross .card img,.gross .card .tile{width:5.8rem;height:5.8rem}
 .gross .tile .ty{font-size:1.65rem}.gross .tile .ty.s{font-size:1.3rem}.gross .tile .ty.xs{font-size:1.05rem}
@@ -129,6 +131,15 @@ button{touch-action:manipulation}
 .gl.brk-line{width:0;background:none;border-left:2px dashed var(--mute);opacity:.6}
 .brk{position:absolute;top:-.1rem;font-size:1.15rem;font-weight:700;color:var(--mute);letter-spacing:-.12em;white-space:nowrap}
 /* Story-Modus: Kontext bleibt sichtbar, aber gedimmt */
+/* Ohne Kategorie: hohl und gestrichelt, nie mit einer Kategoriefarbe zu verwechseln */
+.card.nocat{background:var(--bg);border:1.5px dashed var(--mute);box-shadow:none}
+.card.nocat:hover{border-color:var(--ink)}
+.tile.nocat{background:repeating-linear-gradient(135deg,#8f8c84 0 6px,#a9a69e 6px 12px)}
+.dot.nocat{background:var(--bg);border-color:var(--mute)}
+.stem.nocat{background:none;width:0;border-left:2px dashed var(--mute);opacity:.6}
+.span.nocat{background:repeating-linear-gradient(90deg,var(--mute) 0 6px,transparent 6px 10px);opacity:.7}
+.lane-label.nocat{background:var(--bg);border:1.5px dashed var(--mute);box-shadow:none}
+#caption .cd.nocat{border-left:5px dotted var(--mute)}
 .dim{opacity:.25;transition:opacity .2s}
 .card.dim:hover{opacity:.6}
 .thread{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
@@ -154,8 +165,8 @@ button{touch-action:manipulation}
 #empty{position:absolute;left:0;right:0;top:35%;text-align:center;color:var(--mute);pointer-events:none}
 
 /* Overlays: Detail, Editor, Einstellungen */
-#detail,#editor,#settings{position:fixed;inset:0;background:var(--backdrop);z-index:40;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
-#sheet,#edsheet,#setsheet{position:relative;width:min(58rem,96vw);max-height:94vh;overflow:auto;background:var(--panel);border-radius:.8rem;
+#detail,#editor,#settings,#pdfdlg{position:fixed;inset:0;background:var(--backdrop);z-index:40;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
+#sheet,#edsheet,#setsheet,#pdfsheet{position:relative;width:min(58rem,96vw);max-height:94vh;overflow:auto;background:var(--panel);border-radius:.8rem;
   padding:1.6rem 2.2rem 2rem;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .sheet-x{position:absolute;top:.7rem;right:.8rem;border:0;background:none;font-size:1.3rem;cursor:pointer;color:var(--mute)}
 #sheet .meta{font-size:.95rem;color:var(--mute);display:flex;gap:.7rem;align-items:center}
@@ -207,7 +218,39 @@ button{touch-action:manipulation}
 .sws{display:flex;gap:.25rem}
 .sw{width:1.3rem;height:1.3rem;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);padding:0}
 .sw.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--panel) inset}
+.sw.wheel{background:conic-gradient(#e53935,#fb8c00,#fdd835,#43a047,#00acc1,#1e88e5,#8e24aa,#e53935);display:flex;align-items:center;justify-content:center}
+.sw.wheel i{display:block;width:.62rem;height:.62rem;border-radius:50%;border:2px solid #fff;box-sizing:border-box}
+.xpal{display:grid;grid-template-columns:repeat(8,1.3rem);gap:.35rem;padding:.55rem;margin:.1rem 0 .6rem;border:1px solid var(--line);border-radius:.5rem;background:var(--bg);width:max-content;max-width:100%}
+.xpal .own{grid-column:1/-1;margin-top:.1rem;display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer;color:var(--ink)}
+.xpal .own input{width:2rem;height:1.5rem;padding:0;border:1px solid var(--line);border-radius:.3rem;background:none;cursor:pointer}
 .mini{border:1px solid var(--line);background:var(--panel);border-radius:.3rem;cursor:pointer;padding:.1rem .45rem}
+#pdfsheet{width:min(36rem,96vw)}
+.bgdot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;border:1px solid var(--mute);margin-right:.35rem;vertical-align:-.1rem}
+/* Hintergrundfarbe (nur im hellen Modus; Karten bleiben weiss) */
+:root[data-bg=milchig]:not([data-theme=dark]){--bg:#fbf5e0}
+:root[data-bg=weiss]:not([data-theme=dark]){--bg:#ffffff}
+:root[data-bg=hellgrau]:not([data-theme=dark]){--bg:#ebebea}
+:root[data-bg=blaugrau]:not([data-theme=dark]){--bg:#e8edf2}
+/* Nur-Ansicht-Modus (Export für GitHub Pages): alles zum Bearbeiten und Exportieren ausblenden */
+body.web #btnEdit,body.web #btnAdd,body.web #btnSave,body.web #fileStatus,body.web #mFolder,body.web #mSettings,body.web #mStories,body.web #mSave,body.web #mExport,body.web #mWeb,body.web #mPdf,body.web #mPdfA1{display:none}
+body.web #admin{opacity:1}
+/* PDF-Export: eine eigene Druckseite, der Rest der App wird beim Drucken ausgeblendet */
+#printroot{display:none;--panel:#fff;--ink:#1d1d1b;--mute:#6a675f;--line:#d3cec3;--axis:#2a2a28;--shadow:0 1px 2px rgba(0,0,0,.12);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.pp-page{position:relative;overflow:hidden;background:var(--bg)}
+.pp-head{overflow:hidden}
+.pp-row{display:flex;align-items:baseline;gap:4mm}
+.pp-head h1{margin:0;font-weight:700;white-space:nowrap}
+.pp-leg{display:flex;gap:.2em .9em;flex-wrap:wrap;margin-top:1mm}
+.pp-leg span{display:inline-flex;align-items:center;gap:.35em}
+.pp-leg i{display:inline-block;width:.75em;height:.75em;border-radius:50%;background:var(--c)}
+.pp-head .meta{margin-left:auto;color:var(--mute);white-space:nowrap}
+.pp-in{position:relative}
+@media print{
+  html,body{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important}
+  body>*:not(#printroot){display:none!important}
+  #printroot{display:block!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 .mini.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 </style>
 </head>
@@ -225,7 +268,6 @@ button{touch-action:manipulation}
     <button class="btn" id="btnSearch" title="Suche (/)" aria-label="Suche"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 10l4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   </div>
   <div class="grp" id="admin" hidden>
-    <span id="status"></span>
     <span id="fileStatus" hidden></span>
     <button class="btn primary" id="btnAdd" hidden>+ Ereignis</button>
     <button class="btn" id="btnSave" hidden>Sichern</button>
@@ -240,6 +282,9 @@ button{touch-action:manipulation}
   <button id="mStories">Stories verwalten …</button>
   <button id="mSave" hidden>Sichern …</button>
   <button id="mExport">Exportieren für Backup (Zip) …</button>
+  <button id="mWeb">Exportieren für GitHub Pages (Zip) …</button>
+  <button id="mPdf">Exportieren als PDF …</button>
+  <button id="mPdfA1">Exportieren als PDF (Format A1) …</button>
   <button id="mTheme">Hell / Dunkel (T)</button>
   <button id="mFs">Vollbild (F)</button>
   <div class="info" id="mInfo"></div>
@@ -267,18 +312,24 @@ button{touch-action:manipulation}
 
 <footer id="caption" class="hint"></footer>
 <div id="searchbar" hidden><input type="text" id="q" placeholder="Suchen …" autocomplete="off" enterkeyhint="search" aria-label="Suche"><span id="qcount"></span><button id="qprev" title="Vorheriger Treffer (Umschalt+Enter)" aria-label="Vorheriger Treffer">↑</button><button id="qnext" title="Nächster Treffer (Enter)" aria-label="Nächster Treffer">↓</button><button id="qx" title="Suche beenden (Esc)" aria-label="Suche beenden">✕</button></div>
+<span id="status"></span>
 <div id="tip" hidden></div>
 <div id="detail" hidden><div id="sheet"></div></div>
 <div id="editor" hidden><div id="edsheet" class="form"></div></div>
 <div id="settings" hidden><div id="setsheet" class="form"></div></div>
+<div id="pdfdlg" hidden><div id="pdfsheet" class="form"></div></div>
 <div id="stories" hidden><div id="storysheet" class="form"></div></div>
 <input type="file" id="dirInput" webkitdirectory hidden>
 <input type="file" id="zipInput" accept=".zip,application/zip,application/x-zip-compressed" hidden>
 
 <script>
 'use strict';
+/* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
+const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '1.3.1', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+const VERSION = '1.5', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+/* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
+const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
 const $ = s => document.querySelector(s);
 const el = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
@@ -287,8 +338,12 @@ const pad2 = n => String(n).padStart(2, '0');
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const hint = () => '← → blättern · Enter Details · Strg + Scrollen oder + / − zoomen · 0 Überblick · B Achse/Bahnen' +
   ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · / Suche · T hell/dunkel · F Vollbild';
-const HINT_EDIT = 'Bearbeiten: Klick auf Karte = bearbeiten · Doppelklick auf Zeitstrahl = neues Ereignis · N neu · E ausgewähltes bearbeiten';
-const PALETTE = ['#c8452f','#2b59c3','#1e7a4f','#9a6a00','#7b4fb0','#0f8b9a','#c2185b','#5b6770'];
+const HINT_EDIT = 'Bearbeiten: Klick auf Ereignis = bearbeiten · Doppelklick auf Zeitstrahl = neues Ereignis · N neu · E ausgewähltes bearbeiten';
+const PALETTE = ['#c8452f','#2b59c3','#1e7a4f','#9a6a00','#7b4fb0','#0f8b9a','#c2185b'];   /* 7 Grundfarben, Grau gehört der «Ohne Kategorie» */
+const EXTRA = ['#e4572e','#d1495b','#9c1c3d','#b5361f','#c25e0a','#a87400','#7a5c00','#8d4b2f',
+               '#6b8e23','#3a7d44','#0b5d3b','#00796b','#1f8578','#0277bd','#1a4fa0','#1b2f6e',
+               '#3949ab','#5e35b1','#4a2c82','#8e24aa','#d81b60','#a0527c','#4f7cac','#b0446b'];   /* Farbrad: weisse Schrift bleibt lesbar */
+const NOCAT = '#6a675f';
 const MAXCATS = 8;
 const DEFAULT_CATS = () => [
   { id:'krieg', name:'Krieg & Konflikt', farbe:PALETTE[0] },
@@ -299,9 +354,9 @@ const DEFAULT_CATS = () => [
   { id:'klima', name:'Klima & Umwelt', farbe:PALETTE[5] } ];
 const S = { src:null, data:null, events:[], vis:[], cats:{}, byId:{}, hidden:new Set(), ppd:1, t0:0, tmax:0, pad:0,
             minPpd:.01, maxPpd:90, sel:null, det:null, geo:null, ticksEl:null, gridEl:null, lanes:[],
-            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null };
+            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null, printW:0 };
 function reindex(){ S.byId = {}; S.events.forEach(e => S.byId[e.id] = e); }
-const vpW = () => $('#viewport').clientWidth || innerWidth || 1024;
+const vpW = () => S.printW || $('#viewport').clientWidth || innerWidth || 1024;
 const slug = s => String(s || '').toLowerCase().replace(/\u00e4/g, 'ae').replace(/\u00f6/g, 'oe').replace(/\u00fc/g, 'ue')
   .replace(/\u00df/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
 
@@ -425,6 +480,14 @@ class ZipSource {
   async write(path, data){ this.files.set(path, data instanceof Blob ? data : new Blob([data])); }
   async list(){ return [...this.files.keys()].filter(p => !skipExport(p)); }
 }
+/* Nur-Ansicht-Modus (Export für GitHub Pages): liest den Zeitstrahl per Web-Abruf aus dem Ordner daten/ neben der Seite */
+class WebSource {
+  constructor(base){ this.base = base; this.name = 'web'; this.canWrite = false; this.web = true; }
+  url(path){ return this.base + path.replace(/(^|\/)_vorschau\//, '$1vorschau/').split('/').map(encodeURIComponent).join('/'); }
+  async file(path){ const r = await fetch(this.url(path)); if (!r.ok) throw notFound(path); return r.blob(); }
+  async text(path){ const r = await fetch(this.url(path)); if (!r.ok) throw notFound(path); return r.text(); }
+  async list(){ return []; }
+}
 /* Beispiel: bearbeitbar, aber nur im Arbeitsspeicher */
 class DemoSource {
   constructor(d){ this.d = d; this.name = 'Beispiel'; this.canWrite = true; this.demo = true; this.mem = new Map(); }
@@ -455,16 +518,19 @@ function assetUrl(path){
   return assetCache.get(path);
 }
 /* Vorschau: gespeichert unter bilder/_vorschau/, wird bei Bedarf automatisch erzeugt */
+async function makeThumb(f){
+  const bmp = await createImageBitmap(f, { resizeWidth:400, resizeQuality:'medium' });
+  const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0);
+  return new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+}
 function getThumb(path){
   if (!thumbCache.has(path)) thumbCache.set(path, (async () => {
     const tp = thumbPath(path);
     try { return URL.createObjectURL(await S.src.file(tp)); } catch {}
     const f = await S.src.file(path);
     try {
-      const bmp = await createImageBitmap(f, { resizeWidth:400, resizeQuality:'medium' });
-      const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
-      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0);
-      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+      const blob = await makeThumb(f);
       if (S.src.canWrite) S.src.write(tp, blob).catch(() => {});
       return URL.createObjectURL(blob);
     } catch { return URL.createObjectURL(f); }
@@ -593,7 +659,7 @@ function setData(src, data){
     updateFileStatus(); }
   $('#btnEdit').disabled = !src.canWrite;
   $('#btnEdit').title = src.canWrite ? '' : 'Dieser Ordner ist nur lesbar (Firefox/Safari). Zum Bearbeiten Chrome oder Edge verwenden.';
-  setEditing(false);
+  setEditing(false); applyBg();
   recomputeSpan();
   S.ppd = isLongSpan() ? overviewPpd() : initialPpd();
   $('#empty').hidden = S.events.length > 0;
@@ -671,14 +737,15 @@ function updateMetrics(){
   S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd));
 }
 const hasImg = e => !!e.bild && e.bild !== 'keins';
-const colOf = e => (S.cats[e.kat] || {}).farbe || '#6a675f';
+const colOf = e => (S.cats[e.kat] || {}).farbe || NOCAT;
+const nc = col => col === NOCAT ? ' nocat' : '';
 /* Standardbild: Kachel mit Jahreszahl (a = Datumsobjekt oder null) */
 function tileHtml(a, col){
   const ty = a ? String(a.y) : '—', L = ty.length, cls = a && a.bc ? (L >= 5 ? ' xs' : L === 4 ? ' s' : '') : '';
-  return `<div class="tile" style="--c:${col}"><span class="ty${cls}">${esc(ty)}</span>${a && a.bc ? '<span class="tz">v. Chr.</span>' : ''}</div>`;
+  return `<div class="tile${nc(col)}" style="--c:${col}"><span class="ty${cls}">${esc(ty)}</span>${a && a.bc ? '<span class="tz">v. Chr.</span>' : ''}</div>`;
 }
 function makeCard(e, col, left, top, dim, CW, CH){
-  const c = el('div', 'card' + (S.sel === e ? ' sel' : '') + (dim ? ' dim' : '')); c.style.setProperty('--c', col);
+  const c = el('div', 'card' + nc(col) + (S.sel === e ? ' sel' : '') + (dim ? ' dim' : '')); c.style.setProperty('--c', col);
   c.style.left = left + 'px'; c.style.top = top + 'px'; c.style.width = CW + 'px'; c.style.height = CH + 'px';
   const real = hasImg(e) && !e.thumbFail;
   c.innerHTML = (real ? '<img alt="" draggable="false">' : e.bild === 'keins' ? '' : tileHtml(e.a, col)) +
@@ -693,14 +760,14 @@ function layout(){
   const vp = $('#viewport'), st = $('#stage');
   const { rem, bahn, gross, CW, CH, GAP, BAND, PADV, GX } = dims();
   updateMetrics();
-  S.pad = Math.round(vpW() * .35);
+  S.pad = S.printW ? Math.round(2.5 * rem) : Math.round(vpW() * .35);
   /* Im Story-Modus zählt die Kategorie-Filterung nicht — die Story darf über alle Kategorien gehen */
   const vis = S.vis = S.events.filter(e => S.story || S.search || !S.hidden.has(e.kat));
   const W = Math.ceil((S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
   st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
   const frag = document.createDocumentFragment(); let H;
   vis.forEach(e => e.x = dayToX(e.pos));
-  const vh = vp.clientHeight;
+  const vh = S.printW ? 0 : vp.clientHeight;
   /* Achsenbalken; mit Lücke zwischen dem v.-Chr.-Block und der Achse ab Jahr 1 */
   const addBars = (parent, top) => {
     const mk = (l, w) => { const b = el('div', 'bar'); b.style.top = top + 'px'; b.style.left = l + 'px'; b.style.right = 'auto'; b.style.width = Math.max(0, w) + 'px'; parent.append(b); };
@@ -725,13 +792,13 @@ function layout(){
       const up = e.lane % 2 === 0, lvl = e.lane >> 1, col = colOf(e);
       const dim = isDim(e);
       const top = up ? axisTop - (lvl + 1) * (CH + GAP) : axisTop + BAND + lvl * (CH + GAP);
-      const sty = el('div', 'stem' + (dim ? ' dim' : '')); sty.style.setProperty('--c', col); sty.style.left = (e.x - 1) + 'px';
+      const sty = el('div', 'stem' + nc(col) + (dim ? ' dim' : '')); sty.style.setProperty('--c', col); sty.style.left = (e.x - 1) + 'px';
       if (up){ sty.style.top = (top + CH) + 'px'; sty.style.height = (dotY - top - CH) + 'px'; }
       else { sty.style.top = dotY + 'px'; sty.style.height = (top - dotY) + 'px'; }
       frag.append(sty);
-      if (e.b){ const sp = el('div', 'span' + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
+      if (e.b){ const sp = el('div', 'span' + nc(col) + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
         sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (dotY - 5) + 'px'; frag.append(sp); }
-      const dot = el('div', 'dot' + (dim ? ' dim' : '')); dot.style.setProperty('--c', col); dot.style.left = (e.x - 6) + 'px'; dot.style.top = (dotY - 6) + 'px'; frag.append(dot);
+      const dot = el('div', 'dot' + nc(col) + (dim ? ' dim' : '')); dot.style.setProperty('--c', col); dot.style.left = (e.x - 6) + 'px'; dot.style.top = (dotY - 6) + 'px'; frag.append(dot);
       e.threadX = e.x; e.threadY = dotY;
       frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
     }
@@ -739,7 +806,7 @@ function layout(){
     /* Bahnen: eine Zeile pro Kategorie */
     S.axisY = null;
     const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => ({ c, evs: [], levels: 0 }));
-    if (vis.some(e => !e.kat)) groups.push({ c:{ id:null, name:'Ohne Kategorie', farbe:'#6a675f' }, evs: [], levels: 0 });
+    if (vis.some(e => !e.kat)) groups.push({ c:{ id:null, name:'Ohne Kategorie', farbe:NOCAT }, evs: [], levels: 0 });
     for (const e of vis){ const g = groups.find(g => g.c.id === (e.kat || null)); if (g) g.evs.push(e); }
     for (const g of groups){
       const lastEnd = [];
@@ -763,12 +830,12 @@ function layout(){
       const h = rowH(g) + extra, col = g.c.farbe;
       const ln = el('div', 'lane'); ln.style.top = y + 'px'; ln.style.height = h + 'px'; ln.style.width = W + 'px';
       ln.style.background = `color-mix(in srgb, ${col} ${i % 2 ? 4 : 9}%, transparent)`; frag.append(ln);
-      const lab = el('div', 'lane-label'); lab.style.setProperty('--c', col); lab.style.top = (y - BAND + 6) + 'px'; lab.textContent = g.c.name; lw.append(lab);
+      const lab = el('div', 'lane-label' + nc(col)); lab.style.setProperty('--c', col); lab.style.top = (y - BAND + 6) + 'px'; lab.textContent = g.c.name; lw.append(lab);
       S.lanes.push({ id:g.c.id, y, h });
       for (const e of g.evs){
         const dim = isDim(e);
         const top = y + extra / 2 + GAP + e.lvl * (CH + GAP);
-        if (e.b){ const sp = el('div', 'span' + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
+        if (e.b){ const sp = el('div', 'span' + nc(col) + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
           sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (top + CH + 2) + 'px'; sp.style.zIndex = 2; frag.append(sp); }
         e.threadX = e.x + CW / 2 - 2.5; e.threadY = top + CH / 2;
         frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
@@ -810,7 +877,8 @@ function renderTicks(){
   const vp = $('#viewport'), ppd = S.ppd;
   /* Nie weiter beschriften als der Balken selbst reicht (Datenrand + Polster) — sonst kann man ins Leere scrollen */
   const dayMin = S.bcW > 0 ? S.t0 : S.t0 - S.pad / ppd, dayMax = S.tmax + S.pad / ppd;
-  const xa = xToDay(vp.scrollLeft - 300), xb = xToDay(vp.scrollLeft + vp.clientWidth + 300);
+  const sl = S.printW ? 0 : vp.scrollLeft, vw = S.printW || vp.clientWidth;
+  const xa = xToDay(sl - 300), xb = xToDay(sl + vw + 300);
   const da = Math.max(dayMin, Math.floor(isBc(xa) ? dayMin : xa)), db = Math.min(dayMax, Math.ceil(isBc(xb) ? dayMin : xb));
   const y0 = Math.max(1, civilFromDays(Math.floor(da)).y), y1 = civilFromDays(Math.ceil(db)).y;
   const dayMode = ppd >= 24, monthMode = ppd * 30.4 >= 40;
@@ -910,11 +978,11 @@ function metaText(){
 function caption(e){
   const f = $('#caption'), meta = metaText();
   if (!e){ f.className = 'hint'; f.innerHTML = `<span>${esc(S.editing ? HINT_EDIT : hint())}</span>${meta}`; return; }
-  const col = (S.cats[e.kat] || {}).farbe || '#6a675f';
+  const col = colOf(e);
   const storyTag = S.story && S.story.set.has(e.id)
     ? `<em style="color:var(--danger)">Story «${esc(S.story.name)}» ${S.story.ids.indexOf(e.id) + 1}/${S.story.ids.length}</em>` : '';
   f.className = '';
-  f.innerHTML = `<span class="cd" style="--c:${col}">${fmtEventHtml(e)}</span><strong>${esc(e.titel)}</strong>` +
+  f.innerHTML = `<span class="cd${nc(col)}" style="--c:${col}">${fmtEventHtml(e)}</span><strong>${esc(e.titel)}</strong>` +
     (e.beschreibung ? `<span>${esc(e.beschreibung)}</span>` : '') + storyTag + meta;
 }
 
@@ -931,7 +999,7 @@ function hideTip(){ $('#tip').hidden = true; }
 /* ========== Detailansicht ========== */
 async function openDetail(e){
   hideTip(); S.det = e;
-  const sh = $('#sheet'), cat = S.cats[e.kat], col = (cat || {}).farbe || '#6a675f';
+  const sh = $('#sheet'), cat = S.cats[e.kat], col = colOf(e);
   const isUrl = /^https?:\/\//i.test(e.quelle || '');
   sh.innerHTML = `<button class="sheet-x" aria-label="Schliessen">✕</button>
     <div class="meta">${cat ? `<span class="chip" style="--c:${col};cursor:default">${esc(cat.name)}</span>` : ''}<span>${fmtEventHtml(e)}</span>
@@ -1003,7 +1071,7 @@ function insertAtCursor(ta, text){ ta.setRangeText(text, ta.selectionStart, ta.s
 /* Vorschau des Standardbilds aus den aktuellen Formularwerten */
 function edTile(){
   const iso = normDateInput($('#f-datum').value, $('#f-bc').checked), kat = S.cats[$('#f-kat').value];
-  return tileHtml(iso ? parseDate(iso) : null, kat ? kat.farbe : '#6a675f');
+  return tileHtml(iso ? parseDate(iso) : null, kat ? kat.farbe : NOCAT);
 }
 async function showEdImage(){
   const box = $('#f-img'); box.textContent = '';
@@ -1141,38 +1209,60 @@ async function deleteEvent(){
   S.data.events = S.data.events.filter(x => x.id !== ED.raw.id); S.sel = null; refresh(); closeEditor(); await saveData();
 }
 
+/* ========== Hintergrundfarbe (pro Zeitstrahl, nur im hellen Modus) ========== */
+const BGS = [['warm','Warm'],['milchig','Milchig'],['weiss','Weiss'],['hellgrau','Hellgrau'],['blaugrau','Blaugrau']];
+const BGCOL = { warm:'#f6f4ef', milchig:'#fbf5e0', weiss:'#ffffff', hellgrau:'#ebebea', blaugrau:'#e8edf2' };
+function applyBg(){
+  const d = document.documentElement, b = S.data && S.data.hintergrund;
+  if (b && BGCOL[b] && b !== 'warm') d.dataset.bg = b; else delete d.dataset.bg;
+}
+
 /* ========== Einstellungen (Titel, Kategorien) ========== */
-const SET = { cats:[], titel:'', gross:false };
+const SET = { cats:[], titel:'', gross:false, bg:'warm', pal:-1 };
 function openSettings(){
   if (!S.data || !S.src.canWrite){ return; }
-  SET.titel = S.data.titel || ''; SET.gross = S.data.kartengroesse === 'gross'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
+  SET.pal = -1; SET.bg = BGCOL[S.data.hintergrund] ? S.data.hintergrund : 'warm'; SET.titel = S.data.titel || ''; SET.gross = S.data.kartengroesse === 'gross'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
   renderSettings(); $('#settings').hidden = false;
 }
 function renderSettings(){
   const sh = $('#setsheet'), used = id => S.data.events.filter(e => e.kategorie === id).length;
   sh.innerHTML = `<button class="sheet-x" id="s-x" aria-label="Schliessen">✕</button><h2>Zeitstrahl-Einstellungen</h2>
     <label>Titel</label><input type="text" id="s-titel" enterkeyhint="done">
-    <label>Kartengrösse</label>
+    <label>Anzeigegrösse der Ereignisse</label>
     <div class="seg" id="s-size" style="width:max-content"><button type="button" data-s="normal">Normal</button><button type="button" data-s="gross">Gross</button></div>
-    <div class="hintline">Gross = breitere und höhere Karten mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.</div>
+    <div class="hintline">Gross = breitere und höhere Ereignisse mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.</div>
+    <label>Hintergrund (nur im hellen Modus)</label>
+    <div class="seg" id="s-bg" style="width:max-content;max-width:100%;flex-wrap:wrap"></div>
     <label>Kategorien (höchstens ${MAXCATS}; die Reihenfolge bestimmt die Bahnen)</label><div id="s-cats"></div>
     <div style="margin-top:.6rem"><button class="btn" id="s-add">+ Kategorie</button></div>
     <div class="actions"><span class="sp"></span><span class="err" id="s-err"></span><button class="btn" id="s-cancel">Abbrechen</button><button class="btn primary" id="s-save">Speichern</button></div>`;
   $('#s-titel').value = SET.titel; $('#s-titel').oninput = () => SET.titel = $('#s-titel').value;
   document.querySelectorAll('#s-size button').forEach(b => { b.classList.toggle('on', (b.dataset.s === 'gross') === SET.gross); b.onclick = () => { SET.gross = b.dataset.s === 'gross'; renderSettings(); }; });
+  BGS.forEach(([k, n]) => { const b = el('button'); b.type = 'button'; if (SET.bg === k) b.classList.add('on'); b.innerHTML = `<i class="bgdot" style="background:${BGCOL[k]}"></i>${n}`; b.onclick = () => { SET.bg = k; renderSettings(); }; $('#s-bg').append(b); });
   const box = $('#s-cats');
   SET.cats.forEach((c, i) => {
-    const r = el('div', 'catrow'); const sws = el('div', 'sws');
-    PALETTE.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; renderSettings(); }; sws.append(b); });
+    const blk = el('div'), r = el('div', 'catrow'); const sws = el('div', 'sws');
+    PALETTE.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; SET.pal = -1; renderSettings(); }; sws.append(b); });
+    const custom = !PALETTE.includes(c.farbe), wb = el('button', 'sw wheel' + (custom ? ' on' : '')); wb.title = 'Weitere Farben';
+    if (custom) wb.innerHTML = `<i style="background:${esc(c.farbe)}"></i>`;
+    wb.onclick = () => { SET.pal = SET.pal === i ? -1 : i; renderSettings(); }; sws.append(wb);
     const inp = el('input'); inp.type = 'text'; inp.setAttribute('enterkeyhint', 'done'); inp.value = c.name; inp.oninput = () => c.name = inp.value;
     const up = el('button', 'mini'); up.textContent = '↑'; up.disabled = i === 0; up.onclick = () => { [SET.cats[i-1], SET.cats[i]] = [SET.cats[i], SET.cats[i-1]]; renderSettings(); };
     const dn = el('button', 'mini'); dn.textContent = '↓'; dn.disabled = i === SET.cats.length - 1; dn.onclick = () => { [SET.cats[i+1], SET.cats[i]] = [SET.cats[i], SET.cats[i+1]]; renderSettings(); };
     const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = c.id && used(c.id) ? `${used(c.id)} Ereignis(se) verlieren ihre Kategorie` : 'Entfernen';
     rm.onclick = () => { const n = c.id ? used(c.id) : 0; if (n && !confirm(`${n} Ereignis(se) verlieren die Kategorie «${c.name}». Trotzdem entfernen?`)) return; SET.cats.splice(i, 1); renderSettings(); };
-    r.append(sws, inp, up, dn, rm); box.append(r);
+    r.append(sws, inp, up, dn, rm); blk.append(r);
+    if (SET.pal === i){
+      const xp = el('div', 'xpal');
+      EXTRA.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; SET.pal = -1; renderSettings(); }; xp.append(b); });
+      const own = el('label', 'own'); own.append('Eigene Farbe …');
+      const ci = el('input'); ci.type = 'color'; ci.value = /^#[0-9a-f]{6}$/i.test(c.farbe) ? c.farbe : '#444444';
+      ci.onchange = () => { c.farbe = ci.value; SET.pal = -1; renderSettings(); }; own.append(ci); xp.append(own); blk.append(xp);
+    }
+    box.append(blk);
   });
   $('#s-add').disabled = SET.cats.length >= MAXCATS;
-  $('#s-add').onclick = () => { const free = PALETTE.find(p => !SET.cats.some(c => c.farbe === p)) || PALETTE[0]; SET.cats.push({ id:'', name:'Neue Kategorie', farbe:free }); renderSettings(); };
+  $('#s-add').onclick = () => { const free = PALETTE.concat(EXTRA).find(p => !SET.cats.some(c => c.farbe === p)) || PALETTE[0]; SET.cats.push({ id:'', name:'Neue Kategorie', farbe:free }); renderSettings(); };
   $('#s-x').onclick = $('#s-cancel').onclick = () => $('#settings').hidden = true;
   $('#s-save').onclick = async () => {
     if (SET.cats.some(c => !c.name.trim())) return $('#s-err').textContent = 'Jede Kategorie braucht einen Namen.';
@@ -1183,6 +1273,8 @@ function renderSettings(){
     }
     S.data.titel = SET.titel.trim() || S.src.name; S.data.kategorien = out;
     if (SET.gross) S.data.kartengroesse = 'gross'; else delete S.data.kartengroesse;
+    if (SET.bg !== 'warm') S.data.hintergrund = SET.bg; else delete S.data.hintergrund;
+    applyBg();
     S.data.events.forEach(e => { if (e.kategorie && !ids.has(e.kategorie)) delete e.kategorie; });
     $('#ttl').textContent = S.data.titel; document.title = S.data.titel + ' – Zeitstrahl';
     [...S.hidden].forEach(h => { if (!ids.has(h)) S.hidden.delete(h); });
@@ -1278,7 +1370,7 @@ function renderStories(){
         const row = el('label'); row.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.3rem 0;cursor:pointer';
         const cb = el('input'); cb.type = 'checkbox'; cb.checked = ev.events.has(e.id);
         cb.onchange = () => { cb.checked ? ev.events.add(e.id) : ev.events.delete(e.id); updateCount(); if (onlySel) renderEventList(); };
-        const dot = el('span'); dot.style.cssText = `width:.6rem;height:.6rem;border-radius:50%;flex:none;background:${(S.cats[e.kat] || {}).farbe || '#6a675f'}`;
+        const dot = el('span'); dot.style.cssText = `width:.6rem;height:.6rem;border-radius:50%;flex:none;background:${colOf(e)}`;
         const txt = el('span'); txt.textContent = `${fmtEvent(e)} — ${e.titel}`;
         row.append(cb, dot, txt); box.append(row);
       });
@@ -1394,13 +1486,183 @@ async function exportZip(){
   finally { setTimeout(() => adm.classList.remove('show'), 5000); }
 }
 
+/* ========== Export für GitHub Pages (nur Ansicht) ========== */
+/* Die Seite kopiert sich selbst (SELF), setzt im Nur-Ansicht-Modus die Konfiguration ein und legt den Zeitstrahl in den Ordner daten/.
+   Vorschaubilder liegen dort unter bilder/vorschau/ (ohne Unterstrich, damit GitHub sie nicht ausblendet). */
+const WEBMARK = '/*WEB_' + 'START*/null/*WEB_' + 'END*/';
+const vorPath = p => thumbPath(p).replace(/(^|\/)_vorschau\//, '$1vorschau/');
+const stampNow = () => { const t = new Date(); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`; };
+function downloadBlob(blob, name){
+  const a = el('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 20000);
+}
+function buildWebHtml(self, titel){
+  if (!self || self.length < 40000 || self.split(WEBMARK).length !== 2 || !self.includes('const VERSION'))
+    throw new Error('Die App-Datei konnte nicht gelesen werden. Bitte die Seite neu laden und nochmals versuchen.');
+  const h = self.replace(WEBMARK, () => JSON.stringify({ base:'daten/' }))
+    .replace(/<html[^>]*>/, '<html lang="de-CH">').replace(/<title>[\s\S]*?<\/title>/, () => `<title>${esc(titel)}</title>`)
+    .replace(/^<!doctype html>\s*/i, '');
+  return `<!doctype html>\n<!-- Zeitstrahl · Version ${VERSION} (${VERSION_DATE}) · Autor: ${AUTHOR} · Nur-Ansicht-Export für GitHub Pages -->\n${h}`;
+}
+const WEB_README = `ZEITSTRAHL FÜR GITHUB PAGES (NUR ANSICHT)
+=========================================
+
+Inhalt:
+  index.html   die Webseite, sie zeigt den Zeitstrahl nur zum Ansehen
+  daten/       der Zeitstrahl (zeitstrahl.json, notizen/, bilder/)
+
+ACHTUNG: Alles, was du hochlädst, ist im Internet öffentlich sichtbar,
+auch Bilder und Notizen. Vorher prüfen: Bildrechte, Namen, Persönliches.
+
+1. Diese Zip-Datei entpacken.
+2. Auf github.com ein NEUES Repository anlegen (Public), z.B. «meine-wirtschaftsgeschichte».
+   Nicht in das Repository der Zeitstrahl-App hochladen, sonst wird deren index.html überschrieben.
+3. «uploading an existing file» bzw. «Add file» → «Upload files» und den INHALT des entpackten
+   Ordners hineinziehen (index.html und den Ordner daten), unten «Commit changes».
+   Über die Weboberfläche gehen höchstens 100 Dateien pro Vorgang und 25 MB pro Datei.
+   Bei mehr Dateien in mehreren Etappen hochladen.
+4. Im Repository «Settings» → «Pages» → «Deploy from a branch» → Branch «main», Ordner «/ (root)» → «Save».
+   Nach ein bis zwei Minuten steht oben der Link: https://DEIN-BENUTZERNAME.github.io/REPOSITORY/
+5. Aktualisieren: neuen Export machen und die Dateien nochmals hochladen (gleiche Namen überschreiben).
+
+Hinweis: index.html funktioniert nur im Internet oder über einen Webserver, nicht per Doppelklick auf dem Computer.
+`;
+async function exportWeb(selfHtml = SELF){
+  if (!S.data || WEB) return;
+  if (!confirm('Exportieren für GitHub Pages\n\nEs entsteht eine Zip-Datei mit einer Webseite, die diesen Zeitstrahl nur zum Ansehen zeigt (ohne Bearbeiten). Wenn du sie auf GitHub Pages hochlädst, ist der Zeitstrahl samt Bildern und Notizen öffentlich im Internet sichtbar.\n\nBitte prüfen: Dürfen alle Bilder und Texte veröffentlicht werden (Bildrechte, Namen, Persönliches)?\n\nWeiter?')) return;
+  const adm = $('#admin');
+  try {
+    adm.classList.add('show'); setStatus('Export läuft …', false, true);
+    const titel = S.data.titel || S.src.name, html = buildWebHtml(selfHtml, titel);
+    await saveChain;
+    const paths = (await S.src.list()).filter(p => !skipExport(p)).sort();
+    const entries = [{ path:'index.html', blob:new Blob([html], { type:'text/html' }) }, { path:'LIES-MICH.txt', blob:new Blob([WEB_README], { type:'text/plain' }) }];
+    for (const path of paths) entries.push({ path:'daten/' + path, blob: await S.src.file(path) });
+    const have = new Set(paths), done = new Set();
+    for (const e of S.data.events){
+      const p = e.bild; if (!p || p === 'keins' || done.has(p) || !have.has(p)) continue;
+      done.add(p); setStatus(`Vorschaubilder … ${done.size}`, false, true);
+      let b = null;
+      try { b = await S.src.file(thumbPath(p)); } catch {}
+      if (!b){ try { b = await makeThumb(await S.src.file(p)); } catch {} }
+      if (b) entries.push({ path:'daten/' + vorPath(p), blob:b });
+    }
+    const root = (slug(titel) || 'zeitstrahl') + '-web';
+    const blob = await buildZip(root, entries, (i, n) => setStatus(`Export … ${i}/${n}`, false, true));
+    downloadBlob(blob, `${root}-${stampNow()}.zip`);
+    setStatus(`✓ Export für GitHub Pages: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
+    if (entries.length > 100) alert(`Der Export enthält ${entries.length} Dateien. GitHub nimmt über die Weboberfläche höchstens 100 Dateien pro Vorgang an: bitte in mehreren Etappen hochladen (Anleitung in LIES-MICH.txt).`);
+  } catch (err){ setStatus('FEHLER beim Export', true); alert('Export fehlgeschlagen:\n' + err.message); }
+  finally { setTimeout(() => adm.classList.remove('show'), 5000); }
+}
+async function startWeb(cfg){
+  document.body.classList.add('web'); $('#welcome').hidden = true;
+  const src = new WebSource((cfg && cfg.base) || 'daten/');
+  try { setData(src, JSON.parse(await src.text('zeitstrahl.json'))); }
+  catch (err){
+    $('#welcome').hidden = false;
+    $('#welcome .box').innerHTML = '<h1>Zeitstrahl</h1><p>Der Zeitstrahl konnte nicht geladen werden. Diese Seite funktioniert nur im Internet (GitHub Pages), nicht per Doppelklick auf dem Computer. Ausserdem muss der Ordner «daten» neben der Seite liegen.</p>';
+  }
+}
+
+/* ========== Export als PDF (Druckdialog des Browsers: «Als PDF speichern») ========== */
+/* Der Zeitstrahl wird für eine breite Ansicht (Breite automatisch gewählt, PRINT_WS) neu gelegt, in eine Druckseite kopiert und auf eine Seite skaliert.
+   Gedruckt wird, was nach den Kategorie-Filtern sichtbar ist, in der aktuellen Ansicht (Achse oder Bahnen). */
+const PRINT_WS = [1400, 2000, 3000, 4500, 6500, 9000, 13000];      // probierte Breiten (Pixel); die mit dem grössten Massstab gewinnt
+const PAGES = { a4:{ w:297, h:210, pad:8 }, a1:{ w:841, h:594, pad:20 } };      // Querformat, Millimeter
+function printPlan(fmt, Wc, Hc){
+  const P = PAGES[fmt], u = P.w / 297, mm = 96 / 25.4, head = 20 * u;
+  const aw = (P.w - 2 * P.pad) * mm, ah = (P.h - 2 * P.pad - head) * mm - 2;
+  const sc = Math.min(aw / Wc, ah / Hc);
+  return { sc, u, mm, head, pw:P.w, ph:P.h, pad:P.pad, w:Wc * sc, h:Hc * sc, aw, ah };
+}
+/* «1800» = 1800, «-500» oder «500 v. Chr.» = 500 v. Chr.; leer = unbegrenzt. Ergebnis: astronomisches Jahr (1 v. Chr. = 0) */
+function parseYearInput(str){
+  str = String(str || '').trim(); if (!str) return { ya:null };
+  const m = str.match(/^([-−])?\s*(\d{1,4})\s*(v\.?\s*chr\.?)?$/i); if (!m || !+m[2]) return { err:true };
+  return { ya: m[1] || m[3] ? 1 - +m[2] : +m[2] };
+}
+function openPdfDialog(fmt){
+  if (!S.data) return;
+  const a1 = fmt === 'a1', sh = $('#pdfsheet');
+  sh.innerHTML = `<button class="sheet-x" id="p-x" aria-label="Schliessen">✕</button><h2>${a1 ? 'Als PDF exportieren (Format A1)' : 'Als PDF exportieren'}</h2>
+    <div class="hintline">Gedruckt wird die aktuelle Ansicht (${S.view === 'bahnen' ? 'Bahnen' : 'Achse'}) auf einer Seite ${a1 ? 'A1' : 'A4'} quer, ohne ausgeblendete Kategorien. ${a1 ? 'Bilder kommen in voller Auflösung (die Datei kann gross werden).' : ''} Im folgenden Druckfenster «Als PDF speichern» wählen.${a1 ? ' Falls der Browser das Format nicht übernimmt: dort A1 (841 × 594 mm) einstellen.' : ''}</div>
+    <label>Zeitraum (optional)</label>
+    <div class="catrow"><span>von</span><input type="text" id="p-von" placeholder="Anfang" enterkeyhint="done" style="max-width:8rem"><span>bis</span><input type="text" id="p-bis" placeholder="Ende" enterkeyhint="done" style="max-width:8rem"></div>
+    <div class="hintline">Jahreszahlen, vor Christus mit Minus (z.B. -500). Leer lassen für alles. Zählt das Startjahr der Ereignisse.${a1 ? '' : ' Bei langen Zeitstrahlen mit vielen Ereignissen wird die Schrift auf A4 sehr klein: dann den Zeitraum eingrenzen oder das Format A1 wählen.'}</div>
+    <div class="actions"><span class="sp"></span><span class="err" id="p-err"></span><button class="btn" id="p-cancel">Abbrechen</button><button class="btn primary" id="p-go">PDF erstellen</button></div>`;
+  const close = () => $('#pdfdlg').hidden = true;
+  $('#p-x').onclick = $('#p-cancel').onclick = close;
+  $('#p-go').onclick = async () => {
+    const f = parseYearInput($('#p-von').value), t = parseYearInput($('#p-bis').value), err = $('#p-err');
+    if (f.err || t.err) return err.textContent = 'Bitte Jahreszahlen eingeben, z.B. 1800 oder -500.';
+    if (f.ya != null && t.ya != null && f.ya > t.ya) return err.textContent = '«von» muss vor «bis» liegen.';
+    close(); setStatus('PDF wird vorbereitet …', false, true);
+    try { await printTimeline(fmt, f.ya, t.ya); setStatus(''); }
+    catch (e){ setStatus('FEHLER beim PDF', true); alert('PDF konnte nicht erstellt werden:\n' + e.message); }
+  };
+  $('#pdfdlg').hidden = false; $('#p-von').focus();
+}
+$('#pdfdlg').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); $('#pdfdlg').hidden = true; } });
+function clearPrint(){ document.querySelectorAll('#printroot,#printstyle').forEach(x => x.remove()); }
+async function printTimeline(fmt, from, to){
+  const a1 = fmt === 'a1', vp = $('#viewport'), keep = { events:S.events, bcYears:S.bcYears, byId:S.byId, t0:S.t0, tmax:S.tmax, ppd:S.ppd, sel:S.sel, story:S.story, search:S.search };
+  const sl = vp.scrollLeft, stp = vp.scrollTop, vis0 = vp.style.visibility;
+  let html, Wc, Hc, rem, tone, headHtml, inner;
+  vp.style.visibility = 'hidden';
+  try {
+    S.story = null; S.search = null; S.sel = null;
+    const raw = S.data.events.filter(e => { const a = parseDate(e.datum); return a && (from == null || a.ya >= from) && (to == null || a.ya <= to); });
+    const p = prepare({ ...S.data, events: raw });
+    if (!p.evs.length) throw new Error('Im gewählten Zeitraum gibt es keine Ereignisse.');
+    S.events = p.evs; S.bcYears = p.bcYears; reindex();
+    /* Breite wählen: lange Zeitstrahlen werden in schmaler Ansicht sehr hoch (viele Ebenen), breitere Ansicht macht sie flacher. Die Breite mit dem grössten Massstab gewinnt. */
+    const layoutAt = W => { S.printW = W; recomputeSpan(); S.ppd = S.minPpd; layout(); const r = { W, Wc:Math.ceil(S.contentRight + 2 * S.geo.rem), Hc:Math.ceil(S.geo.H) }; r.sc = printPlan(fmt, r.Wc, r.Hc).sc; return r; };
+    let best = null, worse = 0;
+    for (const W of PRINT_WS){ const r = layoutAt(W); if (!best || r.sc > best.sc){ best = r; worse = 0; } else if (++worse >= 2 || !S.vis.length) break; }
+    if (S.printW !== best.W) layoutAt(best.W);
+    if (!S.vis.length) throw new Error('Es sind keine Ereignisse sichtbar (alle Kategorien ausgeblendet?).');
+    await Promise.all(S.vis.map(e => e._tp).filter(Boolean).map(q => q.catch(() => {})));      // Vorschaubilder fertig laden
+    if (a1) for (const e of S.vis){                                                              // Plakat: Originalbilder
+      const img = hasImg(e) && !e.thumbFail && e.el && e.el.querySelector('img'); if (!img) continue;
+      try { img.src = await assetUrl(e.bild); } catch {}
+    }
+    rem = S.geo.rem; Wc = best.Wc; Hc = best.Hc;
+    tone = a1 ? (BGCOL[S.data.hintergrund] || BGCOL.warm) : '#ffffff';
+    const leg = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => `<span style="--c:${esc(c.farbe)}"><i></i>${esc(c.name)}</span>`).join('');
+    headHtml = `<div class="pp-row"><h1>${esc(S.data.titel || S.src.name)}</h1>${metaText()}</div><div class="pp-leg">${leg}</div>`;
+    inner = $('#stage').cloneNode(true); inner.removeAttribute('id'); inner.style.position = 'relative';
+  } finally {
+    S.printW = 0; S.events = keep.events; S.bcYears = keep.bcYears; S.byId = keep.byId; S.t0 = keep.t0; S.tmax = keep.tmax; S.ppd = keep.ppd;
+    S.sel = keep.sel; S.story = keep.story; S.search = keep.search;
+    updateMetrics(); layout(); vp.scrollLeft = sl; vp.scrollTop = stp; renderTicks(); vp.style.visibility = vis0;
+  }
+  clearPrint();
+  const pl = printPlan(fmt, Wc, Hc), pt = pl.sc * rem * .75;                                   // Schrift der Ereignisse auf dem Papier, in Punkt
+  if (pt < 6 && !confirm(`Bei diesem Umfang wird die Schrift auf dem Papier sehr klein (etwa ${pt.toFixed(1)} Punkt).\n\nBesser: einen Zeitraum eingrenzen, Kategorien ausblenden oder das Format A1 wählen.\n\nTrotzdem fortfahren?`)) return;
+  const root = el('div'); root.id = 'printroot'; root.style.setProperty('--bg', tone);
+  root.innerHTML = `<div class="pp-page" style="width:${pl.pw}mm;height:${pl.ph - 1}mm;padding:${pl.pad}mm"><div class="pp-head" style="height:${pl.head}mm;font-size:${3.6 * pl.u}mm">${headHtml}</div>` +
+    `<div class="pp-fit" style="width:${Math.floor(pl.w)}px;height:${Math.floor(pl.h)}px;margin:0 auto"><div class="pp-in" style="width:${Wc}px;height:${Hc}px;transform:scale(${pl.sc});transform-origin:0 0"></div></div></div>`;
+  root.querySelector('.pp-head h1').style.fontSize = `${6.5 * pl.u}mm`;
+  root.querySelector('.pp-in').append(inner);
+  const sty = el('style'); sty.id = 'printstyle'; sty.textContent = `@page{size:${pl.pw}mm ${pl.ph}mm;margin:0}@media print{html{font-size:${rem}px!important}}`;
+  document.head.append(sty); document.body.append(root);
+  await Promise.all([...root.querySelectorAll('img')].map(i => i.decode ? i.decode().catch(() => {}) : null));
+  await new Promise(r => setTimeout(r, 150));
+  window.addEventListener('afterprint', clearPrint, { once:true });
+  window.print();
+}
+
 /* ========== Menü ========== */
 $('#btnMenu').onclick = ev => { ev.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
 document.addEventListener('click', ev => { if (!ev.target.closest('#menu')) $('#menu').hidden = true; });
-$('#mFolder').onclick = () => { if (S.dirty && !confirm('Es gibt ungesicherte Änderungen. Trotzdem zu einem anderen Zeitstrahl wechseln?')) return; $('#menu').hidden = true; $('#verwarn').hidden = true; if (S.editing) setEditing(false); S.data = null; $('#welcome').hidden = false; $('#viewtools').hidden = true; $('#admin').hidden = true; closeDetail(); };
+$('#mFolder').onclick = () => { if (S.dirty && !confirm('Es gibt ungesicherte Änderungen. Trotzdem zu einem anderen Zeitstrahl wechseln?')) return; $('#menu').hidden = true; $('#verwarn').hidden = true; if (S.editing) setEditing(false); S.data = null; applyBg(); $('#welcome').hidden = false; $('#viewtools').hidden = true; $('#admin').hidden = true; closeDetail(); };
 $('#mSettings').onclick = () => { $('#menu').hidden = true; openSettings(); };
 $('#mStories').onclick = () => { $('#menu').hidden = true; openStories(); };
 $('#mExport').onclick = () => { $('#menu').hidden = true; exportZip(); };
+$('#mWeb').onclick = () => { $('#menu').hidden = true; exportWeb(); };
+$('#mPdf').onclick = () => { $('#menu').hidden = true; openPdfDialog('a4'); };
+$('#mPdfA1').onclick = () => { $('#menu').hidden = true; openPdfDialog('a1'); };
 $('#mSave').onclick = () => { $('#menu').hidden = true; saveFile(); };
 $('#btnSave').onclick = saveFile;
 $('#mTheme').onclick = () => { $('#menu').hidden = true; toggleTheme(); };
@@ -1418,7 +1680,7 @@ document.addEventListener('keydown', blurOnEnter);
 document.addEventListener('keydown', ev => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || ev.target.isContentEditable) return;
   if (ev.metaKey || ev.ctrlKey || ev.altKey || !S.data) return;
-  if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden) return;
+  if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden || !$('#pdfdlg').hidden) return;
   const k = ev.key, vp = $('#viewport');
   if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else if (S.search || !$('#searchbar').hidden) closeSearch(); else select(null, false); }
   else if (k === '/' && !S.det){ ev.preventDefault(); openSearch(); }
@@ -1653,6 +1915,7 @@ $('#btnZip').onclick = () => $('#zipInput').click();
 $('#zipInput').onchange = ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) openZipFile(f); };
 $('#btnNew').onclick = newInMemory;
 (async () => {
+  if (WEB){ await startWeb(WEB); return; }
   const canFolder = !!window.showDirectoryPicker, ios = isIOS();
   $('#btnOpen').hidden = ios && !canFolder;                   // das iPad kennt keinen Ordnerzugriff
   $('#btnNew').hidden = canFolder; if (ios) $('#btnNew').className = 'btn primary';
@@ -1677,7 +1940,7 @@ $('#btnNew').onclick = newInMemory;
   caption(null);
 })();
 
-/*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#5b6770"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.2"}, "notes": {}};/*DEMO_END*/
+/*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#c2185b"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.2"}, "notes": {}};/*DEMO_END*/
 </script>
 </body>
 </html>

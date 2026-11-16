@@ -1,0 +1,1594 @@
+<!doctype html>
+<!-- Zeitstrahl · Version 1.2.1 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="author" content="eho">
+<meta name="version" content="1.2.1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeitstrahl</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1d1d1b; --mute:#6a675f; --line:#d3cec3;
+  --axis:#2a2a28; --accent:#2b59c3; --backdrop:rgba(20,20,18,.55); --danger:#b3261e;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.08);
+}
+:root[data-theme=dark]{
+  --bg:#15161a; --panel:#23252b; --ink:#ececea; --mute:#a0a09a; --line:#3a3c44;
+  --axis:#d8d6cf; --accent:#7ea2ff; --backdrop:rgba(0,0,0,.65); --danger:#ff8a80;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 4px 14px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:clamp(13px,.9vw,20px)}
+body{margin:0;height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit}
+
+/* Kopfzeile: Ansicht links/Mitte, Verwaltung rechts */
+#top{display:flex;align-items:center;gap:.8rem;padding:.5rem 1rem;border-bottom:1px solid var(--line);flex:none;position:relative}
+body.editing #top{background:color-mix(in srgb,var(--accent) 10%,var(--bg))}
+#ttl{font-size:1.15rem;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw}
+#legend{display:flex;gap:.4rem;flex-wrap:wrap;flex:1}
+.chip{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:var(--panel);
+  border-radius:99px;padding:.15rem .7rem .15rem .5rem;font-size:.85rem;cursor:pointer}
+.chip::before{content:"";width:.7rem;height:.7rem;border-radius:50%;background:var(--c)}
+.chip.off{opacity:.4;text-decoration:line-through}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:.4rem;padding:.3rem .7rem;cursor:pointer;font-size:.9rem}
+.btn:hover{border-color:var(--mute)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.grp{display:flex;gap:.3rem;align-items:center}
+.seg{display:flex;border:1px solid var(--line);border-radius:.4rem;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:.3rem .7rem;cursor:pointer;font-size:.9rem}
+.seg button.on{background:var(--ink);color:var(--bg)}
+#storySel{border:1px solid var(--line);background:var(--panel);border-radius:.4rem;padding:.3rem .6rem;font:inherit;color:inherit;cursor:pointer;max-width:11rem}
+#storySel.active{border-color:var(--danger);background:color-mix(in srgb, var(--danger) 12%, var(--panel));font-weight:600}
+#admin{opacity:0;transition:opacity .25s}
+#top:hover #admin,#admin:focus-within,body.editing #admin{opacity:1}
+@media (hover:none){#admin{opacity:1}}
+#admin.show{opacity:1}
+body.filemode #admin{opacity:1}
+#fileStatus{font-size:.8rem;color:var(--mute);white-space:nowrap}
+#fileStatus.dirty{color:var(--danger);font-weight:600}
+button{touch-action:manipulation}
+@supports (height:100dvh){body{height:100dvh}}
+@media (pointer:coarse){.form input[type=text],.form textarea,.form select,#storySel{font-size:16px}}
+#status{font-size:.8rem;color:var(--mute);white-space:nowrap}
+#status.err{color:var(--danger);font-weight:600}
+#menu{position:fixed;top:3.2rem;right:1rem;z-index:45;background:var(--panel);border:1px solid var(--line);border-radius:.5rem;
+  box-shadow:var(--shadow);padding:.3rem;min-width:15rem}
+#menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:.5rem .8rem;border-radius:.3rem;cursor:pointer}
+#menu button:hover:not(:disabled){background:var(--bg)}
+#menu button:disabled{opacity:.4;cursor:not-allowed}
+#menu .info{margin-top:.3rem;padding:.55rem .8rem .3rem;border-top:1px solid var(--line);font-size:.75rem;line-height:1.45;color:var(--mute);user-select:text}
+#wInfo{font-size:.75rem;margin-top:1.6rem}
+#verwarn{display:flex;gap:.8rem;align-items:center;padding:.5rem 1rem;background:color-mix(in srgb,var(--danger) 14%,var(--panel));border-bottom:1px solid var(--danger);font-size:.9rem;line-height:1.35}
+#verwarn span{flex:1}
+#verwarn button{border:0;background:none;font-size:1.1rem;cursor:pointer;color:var(--mute)}
+
+/* Zeitstrahl */
+#viewport{flex:1;overflow:auto;position:relative}
+#stage{position:relative}
+.bar{position:absolute;left:0;right:0;height:4px;border-radius:2px;background:var(--axis)}
+.ticks{position:absolute;left:0;right:0;pointer-events:none}
+.ln{position:absolute;top:.5rem;width:1px;height:.6rem;background:var(--axis);opacity:.55}
+.ln.maj{width:2px;height:1.4rem;opacity:1}
+.lb{position:absolute;font-size:.8rem;font-weight:500;color:var(--mute);white-space:nowrap}
+.lb.r1{top:1.15rem}
+.lb.r2{top:2.25rem;color:var(--ink);font-weight:700}
+.stem{position:absolute;width:2px;background:var(--c);opacity:.7;z-index:1}
+.dot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid var(--bg);z-index:3}
+.span{position:absolute;height:10px;border-radius:5px;background:var(--c);opacity:.5;z-index:2}
+.card{position:absolute;width:15rem;height:6.6rem;display:flex;gap:.6rem;padding:.45rem;background:var(--panel);
+  border:1px solid var(--line);border-left:5px solid var(--c);border-radius:.5rem;box-shadow:var(--shadow);
+  cursor:pointer;overflow:hidden;z-index:2}
+.card:hover{z-index:6;border-color:var(--c)}
+.card.sel{outline:3px solid var(--accent);z-index:6}
+.card img,.card .tile{width:4.7rem;height:4.7rem;border-radius:.3rem;flex:none;align-self:center}
+.card img{object-fit:cover;background:var(--line)}
+/* Standardbild: Kachel in der Kategorie-Farbe mit Jahreszahl */
+.tile{background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:700;line-height:1.05;overflow:hidden}
+.tile .ty{font-size:1.35rem}.tile .ty.s{font-size:1.1rem}.tile .ty.xs{font-size:.9rem}
+.tile .tz{font-size:.72rem;font-weight:600;opacity:.92;margin-top:.1rem}
+.card .tx{min-width:0}
+.card .d{font-size:.78rem;color:var(--mute);margin-bottom:.1rem}
+.card .t{font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;hyphens:auto}
+/* Bahnen */
+.bahnen .card{width:13rem;height:5rem;padding:.35rem}
+.bahnen .card img,.bahnen .card .tile{width:3.5rem;height:3.5rem}
+.bahnen .tile .ty{font-size:1.05rem}.bahnen .tile .ty.s{font-size:.9rem}.bahnen .tile .ty.xs{font-size:.75rem}
+.bahnen .tile .tz{font-size:.62rem}
+.bahnen .card .t{-webkit-line-clamp:2;font-size:.92rem}
+/* Kartengrösse «gross» (Einstellung) */
+.gross .card .t{font-size:1.15rem}.gross .card .d{font-size:.88rem}
+.gross .card img,.gross .card .tile{width:5.8rem;height:5.8rem}
+.gross .tile .ty{font-size:1.65rem}.gross .tile .ty.s{font-size:1.3rem}.gross .tile .ty.xs{font-size:1.05rem}
+.gross .tile .tz{font-size:.85rem}
+.gross.bahnen .card .t{font-size:1.05rem}
+.gross.bahnen .card img,.gross.bahnen .card .tile{width:4.4rem;height:4.4rem}
+.gross.bahnen .tile .ty{font-size:1.3rem}.gross.bahnen .tile .ty.s{font-size:1.05rem}.gross.bahnen .tile .ty.xs{font-size:.9rem}
+.gross.bahnen .tile .tz{font-size:.72rem}
+.bahnen .span{height:5px;border-radius:3px}
+.axiswrap{position:sticky;top:0;z-index:8;background:var(--bg);border-bottom:1px solid var(--line)}
+.lblwrap{position:sticky;left:0;width:0;height:0;z-index:9}
+.lane{position:absolute;left:0;z-index:0}
+.lane-label{position:absolute;left:.5rem;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--c);
+  border-radius:.4rem;padding:.2rem .6rem;font-size:.85rem;font-weight:600;box-shadow:var(--shadow);white-space:nowrap}
+.grid{position:absolute;left:0;right:0;z-index:0;pointer-events:none}
+.gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.7}
+.gl.brk-line{width:0;background:none;border-left:2px dashed var(--mute);opacity:.6}
+.brk{position:absolute;top:-.1rem;font-size:1.15rem;font-weight:700;color:var(--mute);letter-spacing:-.12em;white-space:nowrap}
+/* Story-Modus: Kontext bleibt sichtbar, aber gedimmt */
+.dim{opacity:.25;transition:opacity .2s}
+.card.dim:hover{opacity:.6}
+.thread{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
+.threadline{fill:none;stroke:var(--danger);stroke-width:3;stroke-linecap:round;stroke-dasharray:8 6;opacity:.85}
+.thread circle{fill:var(--danger);stroke:var(--bg);stroke-width:2}
+.tag-live{color:var(--danger);font-weight:700}
+#caption{flex:none;min-height:3.2rem;padding:.55rem 1rem;border-top:1px solid var(--line);font-size:1rem;line-height:1.35;
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+#caption .cd{border-left:5px solid var(--c);padding-left:.5rem;color:var(--mute)}
+#caption em{color:var(--mute);font-size:.85rem}
+#caption.hint{color:var(--mute);font-size:.85rem}
+#caption .meta{margin-left:auto;color:var(--mute);font-size:.85rem;white-space:nowrap}
+#tip{position:fixed;z-index:60;max-width:24rem;padding:.55rem .8rem;border-radius:.45rem;background:var(--ink);color:var(--bg);
+  font-size:.95rem;line-height:1.35;pointer-events:none;box-shadow:var(--shadow)}
+
+/* Willkommen */
+#welcome{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:20}
+#welcome .box{max-width:34rem;padding:2rem;text-align:center}
+#welcome h1{font-size:2.4rem;margin:0 0 .4rem}
+#welcome p{color:var(--mute);line-height:1.5}
+#welcome .btn{margin:.3rem;padding:.6rem 1.1rem;font-size:1rem}
+#warn,#wMode{font-size:.85rem}
+#empty{position:absolute;left:0;right:0;top:35%;text-align:center;color:var(--mute);pointer-events:none}
+
+/* Overlays: Detail, Editor, Einstellungen */
+#detail,#editor,#settings{position:fixed;inset:0;background:var(--backdrop);z-index:40;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
+#sheet,#edsheet,#setsheet{position:relative;width:min(58rem,96vw);max-height:94vh;overflow:auto;background:var(--panel);border-radius:.8rem;
+  padding:1.6rem 2.2rem 2rem;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.sheet-x{position:absolute;top:.7rem;right:.8rem;border:0;background:none;font-size:1.3rem;cursor:pointer;color:var(--mute)}
+#sheet .meta{font-size:.95rem;color:var(--mute);display:flex;gap:.7rem;align-items:center}
+#sheet h1{margin:.3rem 0 .8rem;font-size:1.9rem;line-height:1.2}
+#sheet .hero{display:block;max-width:100%;max-height:42vh;margin:0 auto 1rem;border-radius:.5rem}
+#sheet .lead{font-size:1.15rem;line-height:1.5}
+.notedivider{display:flex;align-items:center;gap:.6rem;margin:1.8rem 0 1rem;color:var(--mute);
+  font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.notedivider::after{content:"";flex:1;height:1px;background:var(--line)}
+#sheet .src{margin-top:1.2rem;font-size:.9rem;color:var(--mute);word-break:break-all}
+#sheet a{color:var(--accent)}
+.md{font-size:1.05rem;line-height:1.6}
+.md h2,.md h3,.md h4,.md h5{margin:1.4rem 0 .4rem;line-height:1.25}
+.md h2{font-size:1.4rem}.md h3{font-size:1.2rem}.md h4,.md h5{font-size:1.05rem}
+.md img{max-width:100%;border-radius:.4rem;margin:.4rem 0}
+.md blockquote{margin:1rem 0;padding:.2rem 1rem;border-left:4px solid var(--line);color:var(--mute)}
+.md code{background:var(--bg);padding:.1rem .3rem;border-radius:.25rem;font-size:.92em}
+.md pre{background:var(--bg);padding:.8rem 1rem;border-radius:.4rem;overflow:auto}
+.md pre code{padding:0}
+.md hr{border:0;border-top:1px solid var(--line);margin:1.4rem 0}
+.mute{color:var(--mute)}
+
+/* Formulare */
+.form h2{margin:0 0 .6rem;font-size:1.5rem}
+.form label{display:block;font-size:.85rem;color:var(--mute);margin:.9rem 0 .25rem}
+.form input[type=text],.form textarea,.form select{width:100%;font:inherit;padding:.5rem .6rem;border:1px solid var(--line);
+  border-radius:.4rem;background:var(--bg);color:var(--ink)}
+.form textarea{min-height:5rem;resize:vertical;line-height:1.45}
+.form .row{display:flex;gap:1rem}.form .row>div{flex:1}
+.hintline{font-size:.8rem;color:var(--mute);margin-top:.25rem;min-height:1em}
+.hintline.bad{color:var(--danger)}
+.form label.chk{display:flex;align-items:center;gap:.4rem;margin:.4rem 0 0;font-size:.85rem;color:var(--mute);cursor:pointer;font-weight:400}
+.form label.chk input{width:auto}
+.drop{border:2px dashed var(--line);border-radius:.6rem;padding:.8rem;text-align:center;color:var(--mute);cursor:pointer;position:relative}
+.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.drop img{max-height:10rem;max-width:100%;border-radius:.4rem;display:block;margin:0 auto}
+.drop .tile{width:5.5rem;height:5.5rem;margin:0 auto;border-radius:.4rem}
+#f-img:not(:empty){margin-bottom:.5rem}
+.tabs{display:flex;gap:.3rem;margin-bottom:.3rem}
+.tabs button{border:1px solid var(--line);background:var(--panel);border-radius:.3rem;padding:.15rem .7rem;cursor:pointer;font-size:.85rem}
+.tabs button.on{background:var(--ink);color:var(--bg)}
+#f-notiz{min-height:11rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem}
+#f-prev{border:1px solid var(--line);border-radius:.4rem;padding:.3rem 1rem;min-height:11rem}
+.actions{display:flex;gap:.6rem;margin-top:1.5rem;align-items:center}
+.actions .sp{flex:1}
+.err{color:var(--danger);font-size:.85rem}
+.catrow{display:flex;gap:.5rem;align-items:center;margin:.4rem 0}
+.catrow input{flex:1}
+.sws{display:flex;gap:.25rem}
+.sw{width:1.3rem;height:1.3rem;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);padding:0}
+.sw.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--panel) inset}
+.mini{border:1px solid var(--line);background:var(--panel);border-radius:.3rem;cursor:pointer;padding:.1rem .45rem}
+.mini.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header id="top">
+  <h1 id="ttl">Zeitstrahl</h1>
+  <div id="legend"></div>
+  <div class="grp" id="viewtools" hidden>
+    <div class="seg" id="view"><button data-v="achse">Achse</button><button data-v="bahnen">Bahnen</button></div>
+    <select id="storySel" hidden title="Story auswählen (S)"></select>
+    <button class="btn" id="zOut" title="Verkleinern (–)">−</button>
+    <button class="btn" id="zIn" title="Vergrössern (+)">+</button>
+    <button class="btn" id="zAll" title="Alles zeigen (0)">Alles</button>
+  </div>
+  <div class="grp" id="admin" hidden>
+    <span id="status"></span>
+    <span id="fileStatus" hidden></span>
+    <button class="btn primary" id="btnAdd" hidden>+ Ereignis</button>
+    <button class="btn" id="btnSave" hidden>Sichern</button>
+    <button class="btn" id="btnEdit">Bearbeiten</button>
+    <button class="btn" id="btnMenu" title="Menü">⋯</button>
+  </div>
+</header>
+<div id="verwarn" hidden><span id="verwarn-t"></span><button id="verwarn-x" aria-label="Schliessen">✕</button></div>
+<div id="menu" hidden>
+  <button id="mFolder">Anderen Ordner öffnen …</button>
+  <button id="mSettings">Zeitstrahl-Einstellungen …</button>
+  <button id="mStories">Stories verwalten …</button>
+  <button id="mSave" hidden>Sichern …</button>
+  <button id="mExport">Exportieren für Backup (Zip) …</button>
+  <button id="mTheme">Hell / Dunkel (T)</button>
+  <button id="mFs">Vollbild (F)</button>
+  <div class="info" id="mInfo"></div>
+</div>
+
+<div id="viewport">
+  <div id="stage"></div>
+  <div id="empty" hidden>Noch keine Ereignisse. Auf «Bearbeiten» klicken, dann «+ Ereignis» oder Doppelklick auf den Zeitstrahl.</div>
+  <div id="welcome">
+    <div class="box">
+      <h1>Zeitstrahl</h1>
+      <p>Ein Zeitstrahl für den Unterricht. Deine Daten bleiben auf deinem Gerät, in einem Ordner oder in einer Datei. Es wird nichts ins Internet hochgeladen.</p>
+      <button class="btn primary" id="btnOpen">Zeitstrahl-Ordner öffnen …</button>
+      <button class="btn" id="btnLast" hidden>Zuletzt: <span></span> – fortsetzen</button>
+      <button class="btn" id="btnNew" hidden>Neuer Zeitstrahl</button>
+      <button class="btn" id="btnZip">Zip-Datei öffnen …</button>
+      <button class="btn" id="btnDraft" hidden>Entwurf fortsetzen: <span></span></button><button class="mini" id="btnDraftX" hidden title="Entwurf verwerfen">✕</button>
+      <button class="btn" id="btnDemo">Beispiel ansehen</button>
+      <p id="wMode">Direkt in einem Ordner speichern, ganz ohne Internet, geht nur mit Google Chrome oder Microsoft Edge am Computer. Mit Safari, Firefox und auf dem iPad arbeitest du mit einer Zip-Datei und sicherst selbst mit «Sichern».</p>
+      <p id="warn"></p>
+      <p id="wInfo"></p>
+    </div>
+  </div>
+</div>
+
+<footer id="caption" class="hint"></footer>
+<div id="tip" hidden></div>
+<div id="detail" hidden><div id="sheet"></div></div>
+<div id="editor" hidden><div id="edsheet" class="form"></div></div>
+<div id="settings" hidden><div id="setsheet" class="form"></div></div>
+<div id="stories" hidden><div id="storysheet" class="form"></div></div>
+<input type="file" id="dirInput" webkitdirectory hidden>
+<input type="file" id="zipInput" accept=".zip,application/zip,application/x-zip-compressed" hidden>
+
+<script>
+'use strict';
+/* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
+const VERSION = '1.2.1', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+/* ========== Hilfen ========== */
+const $ = s => document.querySelector(s);
+const el = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const hint = () => '← → blättern · Enter Details · Strg + Scrollen oder + / − zoomen · 0 Überblick · B Achse/Bahnen' +
+  ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · T hell/dunkel · F Vollbild';
+const HINT_EDIT = 'Bearbeiten: Klick auf Karte = bearbeiten · Doppelklick auf Zeitstrahl = neues Ereignis · N neu · E ausgewähltes bearbeiten';
+const PALETTE = ['#c8452f','#2b59c3','#1e7a4f','#9a6a00','#7b4fb0','#0f8b9a','#c2185b','#5b6770'];
+const MAXCATS = 8;
+const DEFAULT_CATS = () => [
+  { id:'krieg', name:'Krieg & Konflikt', farbe:PALETTE[0] },
+  { id:'geopolitik', name:'Geopolitik & Diplomatie', farbe:PALETTE[1] },
+  { id:'innenpolitik', name:'Innenpolitik & Wahlen', farbe:PALETTE[4] },
+  { id:'wirtschaft', name:'Wirtschaft & Finanzen', farbe:PALETTE[2] },
+  { id:'gesellschaft', name:'Gesellschaft & Kultur', farbe:PALETTE[3] },
+  { id:'klima', name:'Klima & Umwelt', farbe:PALETTE[5] } ];
+const S = { src:null, data:null, events:[], vis:[], cats:{}, byId:{}, hidden:new Set(), ppd:1, t0:0, tmax:0, pad:0,
+            minPpd:.01, maxPpd:90, sel:null, det:null, geo:null, ticksEl:null, gridEl:null, lanes:[],
+            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null };
+function reindex(){ S.byId = {}; S.events.forEach(e => S.byId[e.id] = e); }
+const vpW = () => $('#viewport').clientWidth || innerWidth || 1024;
+const slug = s => String(s || '').toLowerCase().replace(/\u00e4/g, 'ae').replace(/\u00f6/g, 'oe').replace(/\u00fc/g, 'ue')
+  .replace(/\u00df/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+
+/* ========== Datum ========== */
+/* Eigene Datumsrechnung (proleptisch gregorianisch), weil Date.UTC() die Jahre 0–99 falsch umrechnet (Jahr 17 → 1917).
+   Intern zählt die astronomische Jahreszahl (1 v. Chr. = 0, 200 v. Chr. = −199); in Datei und Anzeige gilt die historische Zählung ohne Jahr 0. */
+function daysFromCivil(y, m, d){
+  y -= m <= 2 ? 1 : 0;
+  const era = Math.floor(y / 400), yoe = y - era * 400;
+  const doy = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe - 719468;
+}
+function civilFromDays(z){
+  z += 719468;
+  const era = Math.floor(z / 146097), doe = z - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153), d = doy - Math.floor((153 * mp + 2) / 5) + 1, m = mp + (mp < 10 ? 3 : -9);
+  return { y: yoe + era * 400 + (m <= 2 ? 1 : 0), m, d };
+}
+const MAXBC = 99999;
+/* «476», «0476-03-15», «2023-10-07» oder «200 v. Chr.» (vor Christus nur als Jahr) → Datumsobjekt oder null */
+function parseDate(s, end = false){
+  s = String(s ?? '').trim();
+  let m = /^(\d{1,5})\s*v\.?\s*chr\.?$/i.exec(s);
+  if (m){
+    const n = +m[1]; if (n < 1 || n > MAXBC) return null;
+    const ya = 1 - n;
+    return { y:n, bc:true, ya, mo:0, d:0, prec:'y', day: end ? daysFromCivil(ya, 12, 31) : daysFromCivil(ya, 1, 1) };
+  }
+  m = /^(\d{1,4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(s);
+  if (!m) return null;
+  const y = +m[1], mo = m[2] ? +m[2] : 0, d = m[3] ? +m[3] : 0;
+  if (y < 1 || (m[2] && (mo < 1 || mo > 12))) return null;
+  const prec = d ? 'd' : mo ? 'm' : 'y';
+  let day;
+  if (prec === 'd'){ day = daysFromCivil(y, mo, d); const c = civilFromDays(day); if (c.m !== mo || c.d !== d) return null; }
+  else if (prec === 'm') day = end ? daysFromCivil(mo === 12 ? y + 1 : y, mo === 12 ? 1 : mo + 1, 1) - 1 : daysFromCivil(y, mo, 1);
+  else day = end ? daysFromCivil(y, 12, 31) : daysFromCivil(y, 1, 1);
+  return { y, bc:false, ya:y, mo, d, prec, day };
+}
+/* Speicherform: Jahre vierstellig aufgefüllt («0476»), vor Christus «200 v. Chr.» */
+const canon = p => p.bc ? `${p.y} v. Chr.` : String(p.y).padStart(4, '0') + (p.mo ? '-' + pad2(p.mo) : '') + (p.d ? '-' + pad2(p.d) : '');
+const fmt = p => p.bc ? `${p.y} v. Chr.` : p.prec === 'd' ? `${p.d}. ${MONTHS[p.mo-1]} ${p.y}` : p.prec === 'm' ? `${MONTHS[p.mo-1]} ${p.y}` : `${p.y}`;
+const fmtEvent = e => e.ende === 'heute' ? `seit ${fmt(e.a)} – laufend` : e.b ? `${fmt(e.a)} – ${fmt(e.b)}` : fmt(e.a);
+/* Wie fmtEvent, aber als HTML mit «laufend» hervorgehoben — für alle sichtbaren Stellen statt reinem Text */
+const fmtEventHtml = e => e.ende === 'heute' ? `seit ${esc(fmt(e.a))} – <span class="tag-live">laufend</span>` : esc(fmtEvent(e));
+/* Eingabe wie «7.10.2023», «10.2023», «476», «2023-10-07» oder «200 v. Chr.» → Speicherform oder null.
+   bc = Schalter «v. Chr.»: dann ist nur eine Jahreszahl erlaubt. */
+function normDateInput(s, bc = false){
+  s = String(s || '').trim(); let m;
+  if (bc){ if (/^\d{1,5}$/.test(s)) s += ' v. Chr.'; else if (!/v\.?\s*chr/i.test(s)) return null; }
+  let p = parseDate(s); if (p) return canon(p);
+  if ((m = /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{1,4})$/.exec(s))) s = `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  else if ((m = /^(\d{1,2})\.\s*(\d{1,4})$/.exec(s))) s = `${m[2]}-${pad2(m[1])}`;
+  p = parseDate(s); return p ? canon(p) : null;
+}
+/* Speicherform → Anzeige im Eingabefeld, in Schweizer Punktschreibweise (nie ISO im Formular); bei v. Chr. nur die Zahl, der Schalter steht separat */
+function toSwissInput(iso){
+  const p = parseDate(iso); if (!p) return iso || '';
+  if (p.bc) return String(p.y);
+  return p.prec === 'd' ? `${p.d}.${p.mo}.${p.y}` : p.prec === 'm' ? `${p.mo}.${p.y}` : `${p.y}`;
+}
+const isBcDate = iso => { const p = parseDate(iso); return !!(p && p.bc); };
+const yearTag = p => p.bc ? 'v' + p.y : String(p.y);
+
+/* ========== Pfade ========== */
+function normPath(base, rel){
+  try { rel = decodeURI(rel); } catch {}
+  const out = [];
+  for (const p of (base ? base + '/' : '').concat(rel).split('/')){
+    if (!p || p === '.') continue;
+    if (p === '..') out.pop(); else out.push(p);
+  }
+  return out.join('/');
+}
+const dirname = p => p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '';
+const thumbPath = p => { const d = dirname(p), b = p.slice(d.length + (d ? 1 : 0)).replace(/\.[^.]+$/, ''); return (d ? d + '/' : '') + '_vorschau/' + b + '.jpg'; };
+const notFound = m => { const e = new Error(m); e.name = 'NotFoundError'; return e; };
+
+/* ========== Quellen (Ordner, Dateiliste, Beispiel) ========== */
+/* Was beim Export nicht mitkommt: automatisch erzeugte Vorschaubilder, Sicherungskopien, Systemdateien */
+const skipExport = p => /(^|\/)_vorschau(\/|$)/.test(p) || /\.bak$/.test(p) || /(^|\/)\.DS_Store$/.test(p) || /\.crswap$/.test(p);
+class DirSource {
+  constructor(h){ this.h = h; this.name = h.name; this.canWrite = true; }
+  async dir(parts, create){ let d = this.h; for (const p of parts) d = await d.getDirectoryHandle(p, { create }); return d; }
+  async file(path){ const parts = path.split('/'); const n = parts.pop(); return (await (await this.dir(parts, false)).getFileHandle(n)).getFile(); }
+  async text(path){ return (await this.file(path)).text(); }
+  async write(path, data){
+    const parts = path.split('/'); const n = parts.pop();
+    const fh = await (await this.dir(parts, true)).getFileHandle(n, { create:true });
+    const w = await fh.createWritable(); await w.write(data); await w.close();
+  }
+  async list(){
+    const out = [];
+    const walk = async (dir, prefix) => {
+      for await (const [name, h] of dir.entries()){
+        const p = prefix + name;
+        if (skipExport(h.kind === 'directory' ? p + '/' : p)) continue;
+        if (h.kind === 'directory') await walk(h, p + '/'); else out.push(p);
+      }
+    };
+    await walk(this.h, ''); return out;
+  }
+}
+class ListSource {
+  constructor(files){
+    this.canWrite = false; this.map = new Map();
+    for (const f of files){ const p = f.webkitRelativePath.split('/'); this.name = p[0]; this.map.set(p.slice(1).join('/'), f); }
+  }
+  async file(path){ const f = this.map.get(path); if (!f) throw notFound(path); return f; }
+  async text(path){ return (await this.file(path)).text(); }
+  async list(){ return [...this.map.keys()].filter(p => !skipExport(p)); }
+}
+/* Datei-Modus: der ganze Zeitstrahl liegt als Zip im Arbeitsspeicher (iPad/Safari/Firefox ohne Ordnerzugriff, oder Zip-Datei geöffnet) */
+class ZipSource {
+  constructor(name, files){ this.name = name; this.files = files; this.canWrite = true; this.fileMode = true; }
+  async file(path){ const f = this.files.get(path); if (!f) throw notFound(path); return f; }
+  async text(path){ return (await this.file(path)).text(); }
+  async write(path, data){ this.files.set(path, data instanceof Blob ? data : new Blob([data])); }
+  async list(){ return [...this.files.keys()].filter(p => !skipExport(p)); }
+}
+/* Beispiel: bearbeitbar, aber nur im Arbeitsspeicher */
+class DemoSource {
+  constructor(d){ this.d = d; this.name = 'Beispiel'; this.canWrite = true; this.demo = true; this.mem = new Map(); }
+  async file(path){
+    if (this.mem.has(path)) return this.mem.get(path);
+    if (path === 'zeitstrahl.json'){
+      /* das Beispiel enthält keine Bilddateien: Ereignisse zeigen die Standardbild-Kachel */
+      const data = { ...this.d.data, events: this.d.data.events.map(({ bild, ...e }) => e) };
+      return new Blob([JSON.stringify(data)], { type:'application/json' });
+    }
+    if (path in this.d.notes) return new Blob([this.d.notes[path]], { type:'text/markdown' });
+    throw notFound(path);
+  }
+  async text(path){ return (await this.file(path)).text(); }
+  async write(path, data){ this.mem.set(path, data instanceof Blob ? data : new Blob([data])); }
+  async list(){ return [...new Set(['zeitstrahl.json', ...Object.keys(this.d.notes), ...this.mem.keys()])].filter(p => !skipExport(p)); }
+}
+
+/* ========== Gemerkter Ordner (IndexedDB) ========== */
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open('zeitstrahl-app', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function idbGet(k){ try { const db = await idb(); return await new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch { return null; } }
+async function idbSet(k, v){ try { const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch {} }
+
+/* ========== Bilder ========== */
+const assetCache = new Map(), thumbCache = new Map();
+function assetUrl(path){
+  if (!assetCache.has(path)) assetCache.set(path, S.src.file(path).then(f => URL.createObjectURL(f)));
+  return assetCache.get(path);
+}
+/* Vorschau: gespeichert unter bilder/_vorschau/, wird bei Bedarf automatisch erzeugt */
+function getThumb(path){
+  if (!thumbCache.has(path)) thumbCache.set(path, (async () => {
+    const tp = thumbPath(path);
+    try { return URL.createObjectURL(await S.src.file(tp)); } catch {}
+    const f = await S.src.file(path);
+    try {
+      const bmp = await createImageBitmap(f, { resizeWidth:400, resizeQuality:'medium' });
+      const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+      if (S.src.canWrite) S.src.write(tp, blob).catch(() => {});
+      return URL.createObjectURL(blob);
+    } catch { return URL.createObjectURL(f); }
+  })());
+  return thumbCache.get(path);
+}
+function ensureThumb(e){
+  const img = e.el.querySelector('img'); if (!img) return;
+  if (e.thumb){ img.src = e.thumb; return; }
+  if (!e._tp) e._tp = getThumb(e.bild)
+    .then(u => { e.thumb = u; const i = e.el && e.el.querySelector('img'); if (i) i.src = u; })
+    .catch(() => { e.thumbFail = true; const i = e.el && e.el.querySelector('img'); if (i){ const t = el('div'); t.innerHTML = tileHtml(e.a, colOf(e)); i.replaceWith(t.firstChild); } });
+}
+
+/* ========== Markdown (bewusst klein) ========== */
+function inline(s, base){
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*\s][^*]*)\*/g, '<em>$1</em>');
+  s = s.replace(/(^|[\s(])_([^_]+)_(?=[\s.,;:!?)]|$)/g, '$1<em>$2</em>');
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, url) =>
+    /^https?:/i.test(url) ? `<img alt="${alt}" src="${url}">` : `<img alt="${alt}" data-p="${esc(normPath(base, url.replace(/&amp;/g, '&')))}">`);
+  s = s.replace(/\[([^\]]+)\]\(((?:https?:|mailto:)[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function renderMd(src, base){
+  const L = src.replace(/\r/g, '').split('\n'); const out = []; let i = 0;
+  const isList = l => /^\s*[-*+]\s+/.test(l), isOl = l => /^\s*\d+[.)]\s+/.test(l);
+  const block = l => /^\s*$/.test(l) || /^(#{1,5}\s|```|>|(-{3,}|\*{3,}|_{3,})\s*$)/.test(l) || isList(l) || isOl(l);
+  while (i < L.length){
+    const l = L[i]; let m;
+    if (/^\s*$/.test(l)){ i++; continue; }
+    if (/^```/.test(l)){ const b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; out.push(`<pre><code>${esc(b.join('\n'))}</code></pre>`); continue; }
+    if ((m = /^(#{1,5})\s+(.*)$/.exec(l))){ const n = Math.min(5, m[1].length + 1); out.push(`<h${n}>${inline(m[2], base)}</h${n}>`); i++; continue; }
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(l)){ out.push('<hr>'); i++; continue; }
+    if (/^>/.test(l)){ const b = []; while (i < L.length && /^>/.test(L[i])) b.push(L[i++].replace(/^>\s?/, '')); out.push(`<blockquote>${inline(b.join(' '), base)}</blockquote>`); continue; }
+    if (isList(l) || isOl(l)){
+      const ol = isOl(l), b = [];
+      while (i < L.length && (ol ? isOl(L[i]) : isList(L[i]))) b.push(L[i++].replace(/^\s*(?:[-*+]|\d+[.)])\s+/, ''));
+      const t = ol ? 'ol' : 'ul'; out.push(`<${t}>${b.map(x => `<li>${inline(x, base)}</li>`).join('')}</${t}>`); continue;
+    }
+    const b = [l]; i++;
+    while (i < L.length && !block(L[i])) b.push(L[i++]);
+    out.push(`<p>${inline(b.join(' '), base)}</p>`);
+  }
+  return out.join('\n');
+}
+/* Bilder in gerendertem Markdown nachladen (auch noch nicht gespeicherte aus dem Editor) */
+function resolveMdImages(box){
+  box.querySelectorAll('img[data-p]').forEach(img => {
+    const p = img.dataset.p;
+    const u = (ED.open && ED.pending.has(p)) ? Promise.resolve(URL.createObjectURL(ED.pending.get(p))) : assetUrl(p);
+    u.then(x => img.src = x).catch(() => img.replaceWith(document.createTextNode(`[Bild fehlt: ${p}]`)));
+  });
+}
+
+/* ========== Laden ========== */
+function prepare(data){
+  const cats = {}; (data.kategorien || []).forEach(c => cats[c.id] = c);
+  let bad = 0; const evs = [], bcSet = new Set();
+  (data.events || []).forEach(e => {
+    const a = parseDate(e.datum);
+    if (!a || !e.titel){ bad++; return; }
+    let b = null;
+    if (e.ende === 'heute'){ const t = Math.floor(Date.now() / 864e5), c = civilFromDays(t);
+      b = { y:c.y, bc:false, ya:c.y, mo:c.m, d:c.d, prec:'d', day:t }; }
+    else if (e.ende){ b = parseDate(e.ende, true); if (!b || b.day < a.day) b = null; }
+    if (a.bc) bcSet.add(a.ya);
+    if (b && b.bc) bcSet.add(b.ya);
+    const pos = b ? a.day : a.prec === 'd' ? a.day : a.prec === 'm' ? a.day + 14 : a.day + 182;   // echte Tage
+    evs.push({ ...e, a, b, pos, kat: cats[e.kategorie] ? e.kategorie : null });
+  });
+  /* v.-Chr.-Jahre mit Ereignissen = feste Stationen; Position nur noch Reihenfolge (virtuell) */
+  const bcYears = [...bcSet].sort((x, y) => x - y), idx = new Map(bcYears.map((y, i) => [y, i]));
+  for (const e of evs){
+    if (e.a.bc) e.pos = BC0 + idx.get(e.a.ya) * BCU;
+    if (e.b && e.b.bc) e.b = { ...e.b, day: BC0 + idx.get(e.b.ya) * BCU };
+  }
+  evs.sort((x, y) => x.pos - y.pos || String(x.titel).localeCompare(String(y.titel), 'de'));
+  return { cats, evs, bad, bcYears };
+}
+function uniqueId(base){
+  base = base || 'ereignis'; const ids = new Set((S.data.events || []).map(e => e.id)); let id = base, n = 2;
+  while (ids.has(id)) id = `${base}-${n++}`; return id;
+}
+function newData(name){ return { titel: name, kategorien: DEFAULT_CATS(), events: [], stories: [], appVersion: VERSION }; }
+async function loadFrom(src){
+  let data;
+  try { data = JSON.parse(await src.text('zeitstrahl.json')); }
+  catch (err){
+    if (err instanceof SyntaxError){ alert('zeitstrahl.json ist kein gültiges JSON:\n' + err.message); return; }
+    if (src.fileMode){ alert('In dieser Zip-Datei fehlt die Datei zeitstrahl.json.'); return; }
+    if (src.canWrite && confirm(`In «${src.name}» gibt es noch keinen Zeitstrahl. Neuen anlegen?`)){
+      data = newData(src.name); await src.write('zeitstrahl.json', JSON.stringify(data, null, 2));
+    } else { if (!src.canWrite) alert(`In «${src.name}» wurde keine Datei zeitstrahl.json gefunden.`); return; }
+  }
+  setData(src, data);
+}
+function recomputeSpan(){
+  /* Spanne der massstäblichen Achse (ab Jahr 1); die v.-Chr.-Stationen liegen davor und zählen hier nicht */
+  const today = Date.now() / 864e5, ad = [];
+  for (const e of S.events){ if (!isBc(e.pos)) ad.push(e.pos); if (e.b && !isBc(e.b.day)) ad.push(e.b.day); }
+  if (ad.length){ S.t0 = Math.min(...ad) - 30; S.tmax = Math.max(...ad) + 30; }
+  else if (S.bcYears.length){ S.t0 = daysFromCivil(1, 1, 1); S.tmax = S.t0 + 365; }
+  else { S.t0 = today - 395; S.tmax = today + 395; }
+  updateMetrics();
+}
+function setData(src, data){
+  assetCache.clear(); thumbCache.clear();
+  S.src = src; S.data = data; S.hidden.clear(); S.sel = null; S.det = null; S.bakDone = false; S.story = null;
+  data.kategorien = data.kategorien || []; data.events = data.events || []; data.stories = data.stories || [];
+  data.events.forEach(e => { if (!e.id) e.id = uniqueId(slug(e.titel)); });
+  try { S.view = localStorage.getItem('zeitstrahl-view:' + src.name) === 'bahnen' ? 'bahnen' : 'achse'; } catch { S.view = 'achse'; }
+  const p = prepare(data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; reindex();
+  if (p.bad) console.warn(p.bad + ' Ereignis(se) mit ungültigem Datum oder ohne Titel ignoriert');
+  $('#ttl').textContent = data.titel || src.name; document.title = (data.titel || src.name) + ' – Zeitstrahl';
+  $('#welcome').hidden = true; $('#viewtools').hidden = false; $('#admin').hidden = false;
+  { const fm = !!src.fileMode;                                   // Datei-Modus: Sichern-Knopf und Status sichtbar
+    S.dirty = false; S.zipReady = null; S.savedAt = null; S.zipVer++;
+    document.body.classList.toggle('filemode', fm);
+    $('#btnSave').hidden = $('#fileStatus').hidden = $('#mSave').hidden = !fm;
+    $('#mFolder').textContent = fm ? 'Anderen Zeitstrahl öffnen …' : 'Anderen Ordner öffnen …';
+    updateFileStatus(); }
+  $('#btnEdit').disabled = !src.canWrite;
+  $('#btnEdit').title = src.canWrite ? '' : 'Dieser Ordner ist nur lesbar (Firefox/Safari). Zum Bearbeiten Chrome oder Edge verwenden.';
+  setEditing(false);
+  recomputeSpan();
+  S.ppd = isLongSpan() ? overviewPpd() : Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .7 / 365));
+  $('#empty').hidden = S.events.length > 0;
+  checkVersion(data);
+  buildLegend(); syncViewButtons(); syncStorySelect(); syncZoomLabel(); layout(); caption(null);
+  const vp = $('#viewport'); vp.scrollLeft = endScrollLeft(); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts
+  renderTicks();
+}
+function buildLegend(){
+  const l = $('#legend'); l.textContent = '';
+  for (const c of S.data.kategorien){
+    const b = el('button', 'chip' + (S.hidden.has(c.id) ? ' off' : '')); b.style.setProperty('--c', c.farbe); b.textContent = c.name;
+    b.onclick = () => { S.hidden.has(c.id) ? S.hidden.delete(c.id) : S.hidden.add(c.id); buildLegend(); layout(); };
+    l.append(b);
+  }
+}
+/* Nach Änderungen an den Daten: neu aufbauen, Ansicht möglichst beibehalten */
+function refresh(){
+  const vp = $('#viewport'), midDay = xToDay(vp.scrollLeft + vp.clientWidth / 2), top = vp.scrollTop, selId = S.sel && S.sel.id;
+  const p = prepare(S.data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; reindex();
+  S.data.events.sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
+  recomputeSpan(); S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd));
+  S.sel = S.events.find(e => e.id === selId) || null;
+  $('#empty').hidden = S.events.length > 0;
+  buildLegend(); syncZoomLabel(); layout();
+  vp.scrollLeft = dayToX(midDay) - vp.clientWidth / 2; vp.scrollTop = top; renderTicks();
+}
+
+/* ========== Speichern ========== */
+let saveChain = Promise.resolve(), statusTimer = 0;
+function setStatus(msg, err = false, keep = false){
+  const s = $('#status'); s.textContent = msg; s.className = err ? 'err' : ''; clearTimeout(statusTimer);
+  if (msg && !keep && !err) statusTimer = setTimeout(() => { if (S.src && S.src.demo && S.editing) setStatus('Beispiel: Änderungen werden nicht gespeichert', false, true); else s.textContent = ''; }, 2500);
+}
+function saveData(){
+  saveChain = saveChain.then(async () => {
+    try {
+      let old = null; try { old = await S.src.text('zeitstrahl.json'); } catch {}
+      if (old !== null){
+        if (!S.bakDone){ await S.src.write('zeitstrahl.json.sitzung.bak', old); S.bakDone = true; }
+        await S.src.write('zeitstrahl.json.bak', old);
+      }
+      if (!S.data.appVersion || cmpVer(S.data.appVersion, VERSION) < 0) S.data.appVersion = VERSION;   // höchste Version behalten
+      await S.src.write('zeitstrahl.json', JSON.stringify(S.data, null, 2));
+      if (S.src.fileMode){ S.dirty = true; updateFileStatus(); scheduleZip(); scheduleDraft(); setStatus(''); }
+      else setStatus(S.src.demo ? 'Beispiel: nur im Speicher' : '✓ Gespeichert');
+    } catch (err){
+      setStatus('FEHLER beim Speichern', true);
+      alert('Speichern fehlgeschlagen:\n' + err.message + '\n\nDeine Änderungen sind noch im Fenster. Nicht schliessen, Berechtigung prüfen (Menü → Anderen Ordner öffnen → erneut erlauben).');
+    }
+  });
+  return saveChain;
+}
+
+/* ========== Layout ========== */
+/* Achse: Ab Jahr 1 läuft die normale, massstäbliche Achse. Ereignisse vor Christus haben «virtuelle» Positionen:
+   jedes v.-Chr.-Jahr mit Ereignissen ist eine feste Station (gleichmässig verteilt) links davon, mit Bruchmarke «//» dazwischen. */
+const BC0 = -2e9, BCU = 1e4;
+const isBc = v => v < -1e9;
+const dayToX = v => isBc(v) ? S.pad + ((v - BC0) / BCU + .5) * S.bcSlot : (v - S.t0) * S.ppd + S.pad + S.bcW;
+const xToDay = x => S.bcW > 0 && x < S.pad + S.bcW ? BC0 + ((x - S.pad) / S.bcSlot - .5) * BCU : (x - S.pad - S.bcW) / S.ppd + S.t0;
+function dims(){
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const bahn = S.view === 'bahnen', gross = !!(S.data && S.data.kartengroesse === 'gross');
+  const fw = gross ? 1.3 : 1, fh = gross ? 1.25 : 1;
+  return { rem, bahn, gross, CW:(bahn ? 13 : 15) * fw * rem, CH:(bahn ? 5 : 6.6) * fh * rem, GAP:(bahn ? .5 : .7) * rem, BAND:3.6 * rem, PADV:rem, GX:.6 * rem };
+}
+function updateMetrics(){
+  const D = dims(), n = S.bcYears.length;
+  S.bcSlot = Math.max(D.CW * .62, 8 * D.rem);
+  S.bcW = n ? n * S.bcSlot + 2.6 * D.rem : 0;
+  const avail = Math.max(vpW() * .8 - S.bcW, vpW() * .25);
+  S.minPpd = avail / Math.max(1, S.tmax - S.t0);
+  S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd));
+}
+const hasImg = e => !!e.bild && e.bild !== 'keins';
+const colOf = e => (S.cats[e.kat] || {}).farbe || '#6a675f';
+/* Standardbild: Kachel mit Jahreszahl (a = Datumsobjekt oder null) */
+function tileHtml(a, col){
+  const ty = a ? String(a.y) : '—', L = ty.length, cls = a && a.bc ? (L >= 5 ? ' xs' : L === 4 ? ' s' : '') : '';
+  return `<div class="tile" style="--c:${col}"><span class="ty${cls}">${esc(ty)}</span>${a && a.bc ? '<span class="tz">v. Chr.</span>' : ''}</div>`;
+}
+function makeCard(e, col, left, top, dim, CW, CH){
+  const c = el('div', 'card' + (S.sel === e ? ' sel' : '') + (dim ? ' dim' : '')); c.style.setProperty('--c', col);
+  c.style.left = left + 'px'; c.style.top = top + 'px'; c.style.width = CW + 'px'; c.style.height = CH + 'px';
+  const real = hasImg(e) && !e.thumbFail;
+  c.innerHTML = (real ? '<img alt="" draggable="false">' : e.bild === 'keins' ? '' : tileHtml(e.a, col)) +
+    `<div class="tx"><div class="d">${fmtEventHtml(e)}</div><div class="t">${esc(e.titel)}</div></div>`;
+  c.onclick = () => { select(e, false); S.editing ? openEditor(e) : openDetail(e); };
+  c.onmouseenter = ev => showTip(e, ev); c.onmousemove = moveTip; c.onmouseleave = hideTip;
+  e.el = c; if (real) ensureThumb(e);
+  return c;
+}
+function layout(){
+  if (!S.data) return;
+  const vp = $('#viewport'), st = $('#stage');
+  const { rem, bahn, gross, CW, CH, GAP, BAND, PADV, GX } = dims();
+  updateMetrics();
+  S.pad = Math.round(vpW() * .35);
+  /* Im Story-Modus zählt die Kategorie-Filterung nicht — die Story darf über alle Kategorien gehen */
+  const vis = S.vis = S.events.filter(e => S.story || !S.hidden.has(e.kat));
+  const W = Math.ceil((S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
+  st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
+  const frag = document.createDocumentFragment(); let H;
+  vis.forEach(e => e.x = dayToX(e.pos));
+  const vh = vp.clientHeight;
+  /* Achsenbalken; mit Lücke zwischen dem v.-Chr.-Block und der Achse ab Jahr 1 */
+  const addBars = (parent, top) => {
+    const mk = (l, w) => { const b = el('div', 'bar'); b.style.top = top + 'px'; b.style.left = l + 'px'; b.style.right = 'auto'; b.style.width = Math.max(0, w) + 'px'; parent.append(b); };
+    if (S.bcW > 0){ mk(0, S.pad + S.bcSlot * S.bcYears.length); mk(S.pad + S.bcW, W - S.pad - S.bcW); } else mk(0, W);
+  };
+
+  if (!bahn){
+    /* eine Achse, Karten abwechselnd oben/unten */
+    const lastEnd = []; let maxUp = 0, maxDown = 0;
+    for (const e of vis){
+      let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - GX) k++;
+      lastEnd[k] = e.x + CW; e.lane = k;
+      const lvl = k >> 1; if (k % 2 === 0) maxUp = Math.max(maxUp, lvl + 1); else maxDown = Math.max(maxDown, lvl + 1);
+    }
+    const upH = maxUp * (CH + GAP), downH = maxDown * (CH + GAP);
+    const axisTop = Math.max(vh / 2 - BAND / 2, upH + PADV);
+    H = Math.max(vh, axisTop + BAND + downH + PADV);
+    addBars(frag, axisTop + .5 * rem);
+    const ticks = el('div', 'ticks'); ticks.style.top = axisTop + 'px'; ticks.style.height = BAND + 'px'; frag.append(ticks); S.ticksEl = ticks;
+    const dotY = axisTop + .5 * rem + 2; S.axisY = dotY;
+    for (const e of vis){
+      const up = e.lane % 2 === 0, lvl = e.lane >> 1, col = colOf(e);
+      const dim = S.story && !S.story.set.has(e.id);
+      const top = up ? axisTop - (lvl + 1) * (CH + GAP) : axisTop + BAND + lvl * (CH + GAP);
+      const sty = el('div', 'stem' + (dim ? ' dim' : '')); sty.style.setProperty('--c', col); sty.style.left = (e.x - 1) + 'px';
+      if (up){ sty.style.top = (top + CH) + 'px'; sty.style.height = (dotY - top - CH) + 'px'; }
+      else { sty.style.top = dotY + 'px'; sty.style.height = (top - dotY) + 'px'; }
+      frag.append(sty);
+      if (e.b){ const sp = el('div', 'span' + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
+        sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (dotY - 5) + 'px'; frag.append(sp); }
+      const dot = el('div', 'dot' + (dim ? ' dim' : '')); dot.style.setProperty('--c', col); dot.style.left = (e.x - 6) + 'px'; dot.style.top = (dotY - 6) + 'px'; frag.append(dot);
+      e.threadX = e.x; e.threadY = dotY;
+      frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
+    }
+  } else {
+    /* Bahnen: eine Zeile pro Kategorie */
+    S.axisY = null;
+    const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => ({ c, evs: [], levels: 0 }));
+    if (vis.some(e => !e.kat)) groups.push({ c:{ id:null, name:'Ohne Kategorie', farbe:'#6a675f' }, evs: [], levels: 0 });
+    for (const e of vis){ const g = groups.find(g => g.c.id === (e.kat || null)); if (g) g.evs.push(e); }
+    for (const g of groups){
+      const lastEnd = [];
+      for (const e of g.evs){
+        let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - GX) k++;
+        lastEnd[k] = Math.max(e.x + CW, e.b ? dayToX(e.b.day) : 0); e.lvl = k; g.levels = Math.max(g.levels, k + 1);
+      }
+    }
+    const rowH = g => (g.levels || .55) * (CH + GAP) + GAP;
+    const sum = groups.reduce((a, g) => a + rowH(g), 0);
+    const extra = groups.length ? Math.max(0, (vh - BAND - sum) / groups.length) : 0;
+    H = BAND + sum + extra * groups.length;
+    const aw = el('div', 'axiswrap'); aw.style.height = BAND + 'px'; aw.style.width = W + 'px';
+    addBars(aw, .5 * rem);
+    const ticks = el('div', 'ticks'); ticks.style.top = '0'; ticks.style.height = BAND + 'px'; aw.append(ticks); S.ticksEl = ticks;
+    frag.append(aw);
+    const lw = el('div', 'lblwrap'); frag.append(lw);
+    const grid = el('div', 'grid'); grid.style.top = BAND + 'px'; grid.style.height = (H - BAND) + 'px'; frag.append(grid); S.gridEl = grid;
+    let y = BAND, i = 0;
+    for (const g of groups){
+      const h = rowH(g) + extra, col = g.c.farbe;
+      const ln = el('div', 'lane'); ln.style.top = y + 'px'; ln.style.height = h + 'px'; ln.style.width = W + 'px';
+      ln.style.background = `color-mix(in srgb, ${col} ${i % 2 ? 4 : 9}%, transparent)`; frag.append(ln);
+      const lab = el('div', 'lane-label'); lab.style.setProperty('--c', col); lab.style.top = (y - BAND + 6) + 'px'; lab.textContent = g.c.name; lw.append(lab);
+      S.lanes.push({ id:g.c.id, y, h });
+      for (const e of g.evs){
+        const dim = S.story && !S.story.set.has(e.id);
+        const top = y + extra / 2 + GAP + e.lvl * (CH + GAP);
+        if (e.b){ const sp = el('div', 'span' + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
+          sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (top + CH + 2) + 'px'; sp.style.zIndex = 2; frag.append(sp); }
+        e.threadX = e.x + CW / 2 - 2.5; e.threadY = top + CH / 2;
+        frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
+      }
+      y += h; i++;
+    }
+    if (!groups.length) H = vh;
+  }
+  if (S.story){
+    const pts = S.story.ids.map(id => S.byId[id]).filter(e => e && e.threadX != null);
+    if (pts.length > 1){
+      const poly = pts.map(e => `${Math.round(e.threadX)},${Math.round(e.threadY)}`).join(' ');
+      const dots = pts.map(e => `<circle cx="${Math.round(e.threadX)}" cy="${Math.round(e.threadY)}" r="5"/>`).join('');
+      const svgNS = 'http://www.w3.org/2000/svg', thread = document.createElementNS(svgNS, 'svg');
+      thread.setAttribute('class', 'thread'); thread.setAttribute('width', W); thread.setAttribute('height', Math.max(H, vh));
+      thread.innerHTML = `<polyline points="${poly}" class="threadline"/>${dots}`;
+      frag.append(thread);
+    }
+  }
+  S.contentRight = vis.reduce((m, e) => Math.max(m, e.x - 2.5 + CW, e.b ? dayToX(e.b.day) : 0), 0);
+  st.style.width = W + 'px'; st.style.height = Math.max(H, vh) + 'px';
+  st.append(frag);
+  /* Titel kürzen, sodass die letzte sichtbare Zeile mit «…» endet statt mitten in der Zeile abgeschnitten zu werden
+     (erst alle Masse lesen, dann schreiben) */
+  const fit = [];
+  st.querySelectorAll('.card').forEach(c => {
+    const tx = c.querySelector('.tx'), d = c.querySelector('.d'), t = c.querySelector('.t');
+    if (!tx || !tx.clientHeight) return;
+    const lh = parseFloat(getComputedStyle(t).lineHeight) || 16;
+    fit.push([t, Math.max(1, Math.floor((tx.clientHeight - d.offsetHeight - .1 * rem) / lh + .02))]);
+  });
+  fit.forEach(([t, n]) => t.style.webkitLineClamp = n);
+  S.geo = { W, H, CW, CH, rem };
+  renderTicks();
+  caption(S.sel);
+}
+function renderTicks(){
+  if (!S.ticksEl) return;
+  const vp = $('#viewport'), ppd = S.ppd;
+  /* Nie weiter beschriften als der Balken selbst reicht (Datenrand + Polster) — sonst kann man ins Leere scrollen */
+  const dayMin = S.bcW > 0 ? S.t0 : S.t0 - S.pad / ppd, dayMax = S.tmax + S.pad / ppd;
+  const xa = xToDay(vp.scrollLeft - 300), xb = xToDay(vp.scrollLeft + vp.clientWidth + 300);
+  const da = Math.max(dayMin, Math.floor(isBc(xa) ? dayMin : xa)), db = Math.min(dayMax, Math.ceil(isBc(xb) ? dayMin : xb));
+  const y0 = Math.max(1, civilFromDays(Math.floor(da)).y), y1 = civilFromDays(Math.ceil(db)).y;
+  const dayMode = ppd >= 24, monthMode = ppd * 30.4 >= 40;
+  let h = '', g = '';
+  const ln = (x, maj) => { h += `<i class="ln${maj ? ' maj' : ''}" style="left:${x}px"></i>`; if (maj && S.gridEl) g += `<i class="gl" style="left:${x}px"></i>`; };
+  const lb = (x, t, row) => h += `<b class="lb r${row}" style="left:${x + 4}px">${t}</b>`;
+  if (S.bcW > 0){
+    /* v.-Chr.-Stationen und Bruchmarke */
+    S.bcYears.forEach((ya, i) => { const x = S.pad + (i + .5) * S.bcSlot; ln(x, true); lb(x, `${1 - ya} v. Chr.`, 2); });
+    const e1 = S.pad + S.bcSlot * S.bcYears.length, bx = e1 + (S.bcW - S.bcSlot * S.bcYears.length) / 2;
+    h += `<b class="brk" style="left:${bx - 9}px">//</b>`;
+    if (S.gridEl) g += `<i class="gl brk-line" style="left:${bx}px"></i>`;
+  }
+  if (!monthMode){
+    const px = ppd * 365.25, step = [1,2,5,10,20,50,100,200,500,1000].find(s => px * s >= 64) || 2000;
+    for (let y = y0; y <= y1; y++) if (y % step === 0){ const x = dayToX(daysFromCivil(y, 1, 1)); ln(x, true); lb(x, y, 2); }
+  } else {
+    for (let y = y0; y <= y1; y++) for (let m = 1; m <= 12; m++){
+      const d = daysFromCivil(y, m, 1); if (d < da - 40 || d > db + 40) continue;
+      const x = dayToX(d);
+      if (dayMode){ ln(x, true); lb(x, `${MONTHS[m-1]} ${y}`, 2); }
+      else { ln(x, m === 1); lb(x, MONTHS[m-1], 1); if (m === 1) lb(x, y, 2); }
+    }
+    if (dayMode) for (let d = Math.floor(da); d <= db; d++){ const c = civilFromDays(d); if (c.d === 1) continue; const x = dayToX(d); ln(x, false); lb(x, c.d, 1); }
+  }
+  S.ticksEl.innerHTML = h; if (S.gridEl) S.gridEl.innerHTML = g;
+}
+
+/* ========== Ansicht, Zoom, Auswahl ========== */
+function syncViewButtons(){ document.querySelectorAll('#view button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view)); }
+function setView(v){
+  if (!S.data || S.view === v) return; S.view = v; syncViewButtons();
+  try { localStorage.setItem('zeitstrahl-view:' + S.src.name, v); } catch {}
+  const vp = $('#viewport'), d = xToDay(vp.scrollLeft + vp.clientWidth / 2);
+  layout(); vp.scrollLeft = dayToX(d) - vp.clientWidth / 2; vp.scrollTop = 0; centerAxis(); renderTicks();
+}
+document.querySelectorAll('#view button').forEach(b => b.onclick = () => setView(b.dataset.v));
+/* Nach dem Zoomen die Achse senkrecht in die Bildmitte holen (nur Ansicht «Achse»); links/rechts bleibt die Position */
+function centerAxis(){ const vp = $('#viewport'); if (S.view === 'achse' && S.axisY != null) vp.scrollTop = Math.max(0, S.axisY - vp.clientHeight / 2); }
+function setZoom(n, ax){
+  const vp = $('#viewport'), d = xToDay(vp.scrollLeft + ax);
+  S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, n)); layout();
+  vp.scrollLeft = dayToX(d) - ax; centerAxis();
+}
+/* «Alles» = Überblick über OVERVIEW_YEARS Jahre rund um die aktuelle Position (am Anfang die ersten, am Ende die letzten).
+   Bei Zeitstrahlen, die kürzer sind: wirklich alles. */
+const OVERVIEW_YEARS = 100;
+const overviewWin = () => OVERVIEW_YEARS * 365.25;
+const isLongSpan = () => S.tmax - S.t0 > overviewWin() * 1.2;
+const overviewPpd = () => Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / overviewWin()));
+/* Scrollposition, bei der das Ende des Zeitstrahls (neuestes Ereignis samt Karte) ganz rechts sichtbar ist */
+const endScrollLeft = () => Math.max(0, S.contentRight + 2 * (S.geo ? S.geo.rem : 16) - $('#viewport').clientWidth);
+function overview(){
+  if (!S.data) return;
+  const vp = $('#viewport');
+  if (!isLongSpan()){ setZoom(S.minPpd, vp.clientWidth / 2); return; }
+  const c = xToDay(vp.scrollLeft + vp.clientWidth / 2), win = overviewWin();
+  S.ppd = overviewPpd(); layout();
+  if (!isBc(c)){
+    const lo = dayToX(S.t0) - vp.clientWidth * .04;                                        // Anfang: die ersten Jahre
+    vp.scrollLeft = Math.min(Math.max(dayToX(c - win / 2) - vp.clientWidth * .04, lo), Math.max(lo, endScrollLeft()));   // Ende: die letzten Jahre
+  }
+  centerAxis();
+}
+function syncZoomLabel(){
+  const b = $('#zAll'), long = !!S.data && isLongSpan();
+  b.textContent = long ? OVERVIEW_YEARS + ' J.' : 'Alles';
+  b.title = long ? `${OVERVIEW_YEARS} Jahre um die aktuelle Position (0)` : 'Alles zeigen (0)';
+}
+function select(e, center = true){
+  if (S.sel && S.sel.el) S.sel.el.classList.remove('sel');
+  S.sel = e; caption(e);
+  if (e && e.el){ e.el.classList.add('sel'); if (center) e.el.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' }); }
+}
+/* Bei aktiver Story springen die Pfeiltasten nur durch deren Ereignisse, sonst durch alle sichtbaren */
+function stepList(){ return S.story ? S.story.ids.map(id => S.byId[id]).filter(Boolean) : S.vis; }
+function step(dir){
+  const v = stepList(); if (!v.length) return;
+  let i = S.sel ? v.indexOf(S.sel) : -1;
+  i = i < 0 ? (dir > 0 ? 0 : v.length - 1) : Math.min(v.length - 1, Math.max(0, i + dir));
+  select(v[i]);
+}
+/* Angaben zum ganzen Zeitstrahl: Umfang (von – bis, passt auch für andere Achsen) und Anzahl Ereignisse */
+function metaText(){
+  const n = S.events.length; if (!S.data || !n) return '';
+  let lo = S.events[0].a, hi = S.events[0].b || S.events[0].a;
+  for (const e of S.events){ if (e.a.ya < lo.ya) lo = e.a; const end = e.b || e.a; if (end.ya > hi.ya) hi = end; }
+  const yl = p => p.bc ? `${p.y} v. Chr.` : String(p.y);
+  const span = lo.ya === hi.ya ? yl(lo) : `${yl(lo)} – ${yl(hi)}`;
+  const cnt = S.vis.length !== n ? `${S.vis.length} von ${n} Ereignissen` : `${n} Ereignis${n === 1 ? '' : 'se'}`;
+  return `<span class="meta">Umfang: ${esc(span)} · ${cnt}</span>`;
+}
+function caption(e){
+  const f = $('#caption'), meta = metaText();
+  if (!e){ f.className = 'hint'; f.innerHTML = `<span>${esc(S.editing ? HINT_EDIT : hint())}</span>${meta}`; return; }
+  const col = (S.cats[e.kat] || {}).farbe || '#6a675f';
+  const storyTag = S.story && S.story.set.has(e.id)
+    ? `<em style="color:var(--danger)">Story «${esc(S.story.name)}» ${S.story.ids.indexOf(e.id) + 1}/${S.story.ids.length}</em>` : '';
+  f.className = '';
+  f.innerHTML = `<span class="cd" style="--c:${col}">${fmtEventHtml(e)}</span><strong>${esc(e.titel)}</strong>` +
+    (e.beschreibung ? `<span>${esc(e.beschreibung)}</span>` : '') + storyTag + meta;
+}
+
+/* ========== Tooltip ========== */
+function showTip(e, ev){ if (!e.beschreibung) return; const t = $('#tip'); t.textContent = e.beschreibung; t.hidden = false; moveTip(ev); }
+function moveTip(ev){
+  const t = $('#tip'); if (t.hidden) return;
+  const w = t.offsetWidth, h = t.offsetHeight;
+  t.style.left = Math.min(innerWidth - w - 8, ev.clientX + 16) + 'px';
+  t.style.top = (ev.clientY + 20 + h > innerHeight ? ev.clientY - h - 12 : ev.clientY + 20) + 'px';
+}
+function hideTip(){ $('#tip').hidden = true; }
+
+/* ========== Detailansicht ========== */
+async function openDetail(e){
+  hideTip(); S.det = e;
+  const sh = $('#sheet'), cat = S.cats[e.kat], col = (cat || {}).farbe || '#6a675f';
+  const isUrl = /^https?:\/\//i.test(e.quelle || '');
+  sh.innerHTML = `<button class="sheet-x" aria-label="Schliessen">✕</button>
+    <div class="meta">${cat ? `<span class="chip" style="--c:${col};cursor:default">${esc(cat.name)}</span>` : ''}<span>${fmtEventHtml(e)}</span>
+      ${S.editing ? '<button class="btn" id="d-edit" style="margin-left:auto;margin-right:2rem">Bearbeiten</button>' : ''}</div>
+    <h1>${esc(e.titel)}</h1>${hasImg(e) ? '<img class="hero" alt="">' : ''}
+    ${e.beschreibung ? `<p class="lead">${esc(e.beschreibung)}</p>` : ''}
+    ${e.notiz ? '<div class="notedivider"><span>Notiz</span></div>' : ''}<div class="md"></div>
+    ${e.quelle ? `<div class="src">Quelle: ${isUrl ? `<a href="${esc(e.quelle)}" target="_blank" rel="noopener">${esc(e.quelle)}</a>` : esc(e.quelle)}</div>` : ''}`;
+  sh.querySelector('.sheet-x').onclick = closeDetail; sh.scrollTop = 0;
+  const de = sh.querySelector('#d-edit'); if (de) de.onclick = () => { closeDetail(); openEditor(e); };
+  $('#detail').hidden = false;
+  if (hasImg(e)) assetUrl(e.bild).then(u => { if (S.det === e){ const h = sh.querySelector('.hero'); if (h) h.src = u; } }).catch(() => { const h = sh.querySelector('.hero'); if (h) h.remove(); });
+  if (e.notiz){
+    const box = sh.querySelector('.md');
+    try {
+      const t = await S.src.text(e.notiz); if (S.det !== e) return;
+      box.innerHTML = renderMd(t, dirname(e.notiz)); resolveMdImages(box);
+    } catch { if (S.det === e) box.innerHTML = `<p class="mute">Notiz «${esc(e.notiz)}» wurde nicht gefunden.</p>`; }
+  }
+}
+function closeDetail(){ S.det = null; $('#detail').hidden = true; }
+$('#detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
+
+/* ========== Editor ========== */
+const ED = { open:false, pending:new Map() };
+const exists = async p => { try { await S.src.file(p); return true; } catch { return false; } };
+function imgExt(f){
+  const t = (f.type || '').toLowerCase(), n = (f.name || '').toLowerCase();
+  if (/hei[cf]/.test(t) || /\.hei[cf]$/.test(n)){ alert('HEIC-Bilder (iPhone) zeigt Chrome nicht an. Bitte als JPG oder PNG speichern.'); return null; }
+  const map = { 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/gif':'gif', 'image/svg+xml':'svg', 'image/avif':'avif' };
+  if (map[t]) return map[t];
+  const m = /\.(jpe?g|png|webp|gif|svg|avif)$/.exec(n); if (m) return m[1] === 'jpeg' ? 'jpg' : m[1];
+  alert('Das ist keine unterstützte Bilddatei.'); return null;
+}
+/* Im Datei-Modus (iPad) Bilder beim Hinzufügen verkleinern: kleinere Dateien, weniger Speicher */
+async function shrinkImage(file, max = 2000){
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || typeof createImageBitmap !== 'function') return file;
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (k === 1 && file.size < 1.5e6){ if (bmp.close) bmp.close(); return file; }
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], (file.name || 'bild').replace(/\.[^.]+$/, '') + '.jpg', { type:'image/jpeg' });
+  } catch { return file; }
+}
+async function stageImage(file){
+  if (S.src && S.src.fileMode) file = await shrinkImage(file);
+  const ext = imgExt(file); if (!ext) return null;
+  let base = slug((file.name || '').replace(/\.[^.]+$/, ''));
+  if (!base || /^(image|bild|screenshot|unbenannt)$/.test(base)) base = 'bild-' + Date.now().toString(36);
+  let name = `bilder/${base}.${ext}`, n = 2;
+  while (ED.pending.has(name) || await exists(name)) name = `bilder/${base}-${n++}.${ext}`;
+  ED.pending.set(name, file); ED.dirty = true; return name;
+}
+async function filesFromDT(dt){
+  const fs = [...(dt.files || [])].filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|svg|avif|hei[cf])$/i.test(f.name));
+  if (fs.length) return fs;
+  const url = (dt.getData('text/uri-list') || '').split('\n')[0].trim();
+  if (/^https?:/i.test(url)){
+    try { const b = await (await fetch(url)).blob(); if (b.type.startsWith('image/')) return [new File([b], url.split('/').pop().split('?')[0] || 'bild', { type:b.type })]; } catch {}
+    alert('Dieses Bild lässt sich nicht direkt ziehen (Schutz der Webseite).\nRechtsklick auf das Bild → «Bild kopieren», dann hier mit Strg+V einfügen.');
+  }
+  return [];
+}
+function insertAtCursor(ta, text){ ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); ta.dispatchEvent(new Event('input')); }
+/* Vorschau des Standardbilds aus den aktuellen Formularwerten */
+function edTile(){
+  const iso = normDateInput($('#f-datum').value, $('#f-bc').checked), kat = S.cats[$('#f-kat').value];
+  return tileHtml(iso ? parseDate(iso) : null, kat ? kat.farbe : '#6a675f');
+}
+async function showEdImage(){
+  const box = $('#f-img'); box.textContent = '';
+  const p = ED.raw.bild;
+  $('#f-imgstd').hidden = !p; $('#f-imgnone').hidden = p === 'keins';
+  if (p === 'keins'){ box.textContent = 'Kein Bild'; return; }
+  if (!p){ box.innerHTML = edTile(); return; }
+  const img = el('img'); box.append(img);
+  try { img.src = ED.pending.has(p) ? URL.createObjectURL(ED.pending.get(p)) : await assetUrl(p); }
+  catch { img.remove(); box.textContent = `Bild «${p}» nicht gefunden.`; }
+}
+async function openEditor(ev, pre = {}){
+  if (!S.editing) return;
+  hideTip(); closeDetail();
+  const isNew = !ev;
+  const raw = isNew ? { id:'', titel:'', datum:pre.datum || '', kategorie:pre.kategorie || '', beschreibung:'' }
+                    : JSON.parse(JSON.stringify(S.data.events.find(x => x.id === ev.id)));
+  Object.assign(ED, { open:true, isNew, raw, pending:new Map(), dirty:false, noteOrig:'' });
+  const cats = S.data.kategorien;
+  const sh = $('#edsheet');
+  sh.innerHTML = `<button class="sheet-x" id="f-x" aria-label="Schliessen">✕</button>
+    <h2>${isNew ? 'Neues Ereignis' : 'Ereignis bearbeiten'}</h2>
+    <label>Titel</label><input type="text" id="f-titel" autocomplete="off">
+    <div class="row">
+      <div><label>Datum (z.B. 7.10.2023 · 10.2023 · 476 · bei v. Chr. nur das Jahr)</label><input type="text" id="f-datum" autocomplete="off">
+        <label class="chk"><input type="checkbox" id="f-bc">v. Chr.</label>
+        <div class="hintline" id="h-datum"></div></div>
+      <div><label>Ende (optional, macht einen Zeitraum)</label><input type="text" id="f-ende" autocomplete="off">
+        <label class="chk"><input type="checkbox" id="f-ende-bc">v. Chr.</label>
+        <label class="chk"><input type="checkbox" id="f-ongoing">Läuft noch (bis heute)</label>
+        <div class="hintline" id="h-ende"></div></div>
+    </div>
+    <label>Kategorie</label>
+    <select id="f-kat"><option value="">(ohne Kategorie)</option>${cats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+    <label>Kurzbeschreibung (erscheint beim Darüberfahren)</label><textarea id="f-besch"></textarea>
+    <label>Bild</label>
+    <div class="drop" id="f-drop"><div id="f-img"></div><div>Bild hierher ziehen, mit Strg+V einfügen oder klicken</div></div>
+    <div style="margin-top:.4rem;display:flex;gap:.4rem"><button class="mini" id="f-imgstd" hidden>Standardbild</button><button class="mini" id="f-imgnone">Kein Bild</button></div>
+    <input type="file" id="f-file" accept="image/*" hidden>
+    <label>Quelle (Link oder Text)</label><input type="text" id="f-quelle" autocomplete="off">
+    <label>Notiz (Markdown)</label>
+    <div class="tabs"><button class="on" id="t-write">Schreiben</button><button id="t-prev">Vorschau</button></div>
+    <textarea id="f-notiz" placeholder="# Überschrift&#10;Text …&#10;Bilder: hineinziehen oder mit Strg+V einfügen."></textarea>
+    <div id="f-prev" class="md" hidden></div>
+    <div class="actions">${isNew ? '' : '<button class="btn danger" id="f-del">Löschen</button>'}<span class="sp"></span><span class="err" id="f-err"></span>
+      <button class="btn" id="f-cancel">Abbrechen</button><button class="btn primary" id="f-save">Speichern</button></div>`;
+  $('#f-titel').value = raw.titel || ''; $('#f-datum').value = raw.datum ? toSwissInput(raw.datum) : '';
+  $('#f-bc').checked = !!pre.bc || (!!raw.datum && isBcDate(raw.datum));
+  $('#f-ende').value = raw.ende && raw.ende !== 'heute' ? toSwissInput(raw.ende) : '';
+  $('#f-ende-bc').checked = !!raw.ende && raw.ende !== 'heute' && isBcDate(raw.ende);
+  $('#f-kat').value = cats.some(c => c.id === raw.kategorie) ? raw.kategorie : '';
+  $('#f-besch').value = raw.beschreibung || ''; $('#f-quelle').value = raw.quelle || '';
+  const dirty = () => ED.dirty = true;
+  sh.addEventListener('input', dirty);
+  const dateHint = (inp, out, bcBox) => {
+    const v = $(inp).value.trim(), h = $(out);
+    if (!v){ h.textContent = ''; h.className = 'hintline'; return; }
+    const iso = normDateInput(v, $(bcBox).checked);
+    if (iso){ h.textContent = '→ ' + fmt(parseDate(iso)); h.className = 'hintline'; }
+    else { h.textContent = $(bcBox).checked ? 'Vor Christus nur eine Jahreszahl (z.B. 200)' : 'Format nicht erkannt'; h.className = 'hintline bad'; }
+  };
+  const hints = () => { dateHint('#f-datum', '#h-datum', '#f-bc'); dateHint('#f-ende', '#h-ende', '#f-ende-bc'); if (!ED.raw.bild) showEdImage(); };
+  ['#f-datum', '#f-ende'].forEach(i => $(i).oninput = hints);
+  ['#f-bc', '#f-ende-bc', '#f-kat'].forEach(i => $(i).onchange = hints);
+  const syncOngoing = () => { const on = $('#f-ongoing').checked; $('#f-ende').disabled = $('#f-ende-bc').disabled = on; if (on){ $('#f-ende').value = ''; $('#h-ende').textContent = ''; $('#h-ende').className = 'hintline'; } };
+  $('#f-ongoing').checked = raw.ende === 'heute'; $('#f-ongoing').onchange = syncOngoing; syncOngoing();
+  hints(); showEdImage();
+  const drop = $('#f-drop');
+  drop.onclick = () => $('#f-file').click();
+  $('#f-file').onchange = async ev2 => { const f = ev2.target.files[0]; if (f){ const p = await stageImage(f); if (p){ ED.raw.bild = p; showEdImage(); } } ev2.target.value = ''; };
+  $('#f-imgstd').onclick = () => { ED.raw.bild = ''; ED.dirty = true; showEdImage(); };
+  $('#f-imgnone').onclick = () => { ED.raw.bild = 'keins'; ED.dirty = true; showEdImage(); };
+  drop.ondragover = ev2 => { ev2.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = async ev2 => { ev2.preventDefault(); ev2.stopPropagation(); drop.classList.remove('over');
+    const f = (await filesFromDT(ev2.dataTransfer))[0]; if (f){ const p = await stageImage(f); if (p){ ED.raw.bild = p; showEdImage(); } } };
+  const ta = $('#f-notiz');
+  ta.ondragover = ev2 => ev2.preventDefault();
+  ta.ondrop = async ev2 => { ev2.preventDefault(); ev2.stopPropagation(); for (const f of await filesFromDT(ev2.dataTransfer)){ const p = await stageImage(f); if (p) insertAtCursor(ta, `\n![](../${p})\n`); } };
+  sh.onpaste = async ev2 => {
+    const fs = [...(ev2.clipboardData ? ev2.clipboardData.files : [])].filter(f => f.type.startsWith('image/'));
+    if (!fs.length) return; ev2.preventDefault();
+    for (const f of fs){ const p = await stageImage(f); if (!p) continue;
+      if (ev2.target === ta) insertAtCursor(ta, `\n![](../${p})\n`); else { ED.raw.bild = p; showEdImage(); } }
+  };
+  $('#t-write').onclick = () => { $('#f-notiz').hidden = false; $('#f-prev').hidden = true; $('#t-write').classList.add('on'); $('#t-prev').classList.remove('on'); };
+  $('#t-prev').onclick = () => { const b = $('#f-prev'); b.innerHTML = renderMd(ta.value, 'notizen'); resolveMdImages(b);
+    ta.hidden = true; b.hidden = false; $('#t-prev').classList.add('on'); $('#t-write').classList.remove('on'); };
+  $('#f-x').onclick = $('#f-cancel').onclick = cancelEditor;
+  $('#f-save').onclick = saveEditor;
+  const del = $('#f-del'); if (del) del.onclick = deleteEvent;
+  $('#editor').hidden = false; sh.scrollTop = 0;
+  if (raw.notiz){ try { ED.noteOrig = await S.src.text(raw.notiz); } catch { ED.noteOrig = ''; } ta.value = ED.noteOrig; }
+  (isNew ? $('#f-titel') : $('#f-titel')).focus();
+}
+function cancelEditor(){ if (ED.dirty && !confirm('Änderungen verwerfen?')) return; closeEditor(); }
+function closeEditor(){ ED.open = false; $('#editor').hidden = true; }
+$('#editor').addEventListener('keydown', ev => {
+  if (ev.key === 'Escape'){ ev.preventDefault(); cancelEditor(); }
+  else if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)){ ev.preventDefault(); saveEditor(); }
+});
+['dragover', 'drop'].forEach(t => $('#editor').addEventListener(t, ev => ev.preventDefault()));
+async function saveEditor(){
+  const err = m => { $('#f-err').textContent = m; return false; };
+  const titel = $('#f-titel').value.trim(); if (!titel) return err('Titel fehlt.');
+  const d = normDateInput($('#f-datum').value, $('#f-bc').checked); if (!d) return err('Datum fehlt oder Format nicht erkannt.');
+  const ongoing = $('#f-ongoing').checked;
+  let ende = ongoing ? '' : $('#f-ende').value.trim();
+  if (ende){ ende = normDateInput(ende, $('#f-ende-bc').checked); if (!ende) return err('Ende: Format nicht erkannt.'); if (parseDate(ende, true).day < parseDate(d).day) return err('Ende liegt vor dem Beginn.'); }
+  const raw = ED.raw; raw.titel = titel; raw.datum = d; raw.ende = ongoing ? 'heute' : (ende || undefined);
+  raw.kategorie = $('#f-kat').value || undefined;
+  raw.beschreibung = $('#f-besch').value.trim() || undefined; raw.quelle = $('#f-quelle').value.trim() || undefined;
+  if (!raw.bild) delete raw.bild;
+  if (ED.isNew) raw.id = uniqueId(slug(titel) + '-' + yearTag(parseDate(d)));
+  $('#f-save').disabled = true;
+  try {
+    const note = $('#f-notiz').value;
+    if (note.trim()){
+      if (!raw.notiz) raw.notiz = `notizen/${raw.id}.md`;
+      if (note !== ED.noteOrig) await S.src.write(raw.notiz, note.replace(/\s+$/, '') + '\n');
+    } else if (raw.notiz){ delete raw.notiz; }
+    for (const [p, blob] of ED.pending){
+      const rel = '../' + p;
+      if (p === raw.bild || note.includes(rel)) await S.src.write(p, blob);
+    }
+    Object.keys(raw).forEach(k => raw[k] === undefined && delete raw[k]);
+    if (ED.isNew) S.data.events.push(raw); else { const i = S.data.events.findIndex(x => x.id === raw.id); S.data.events[i] = raw; }
+    S.sel = null; refresh();
+    const ne = S.events.find(x => x.id === raw.id); if (ne){ S.sel = null; select(ne); }
+    closeEditor(); await saveData();
+  } catch (e2){ err('Fehler: ' + e2.message); $('#f-save').disabled = false; }
+}
+async function deleteEvent(){
+  if (!confirm(`«${ED.raw.titel}» löschen?\n\nNotiz- und Bilddateien bleiben im Ordner erhalten, nur der Eintrag verschwindet.`)) return;
+  S.data.events = S.data.events.filter(x => x.id !== ED.raw.id); S.sel = null; refresh(); closeEditor(); await saveData();
+}
+
+/* ========== Einstellungen (Titel, Kategorien) ========== */
+const SET = { cats:[], titel:'', gross:false };
+function openSettings(){
+  if (!S.data || !S.src.canWrite){ return; }
+  SET.titel = S.data.titel || ''; SET.gross = S.data.kartengroesse === 'gross'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
+  renderSettings(); $('#settings').hidden = false;
+}
+function renderSettings(){
+  const sh = $('#setsheet'), used = id => S.data.events.filter(e => e.kategorie === id).length;
+  sh.innerHTML = `<button class="sheet-x" id="s-x" aria-label="Schliessen">✕</button><h2>Zeitstrahl-Einstellungen</h2>
+    <label>Titel</label><input type="text" id="s-titel">
+    <label>Kartengrösse</label>
+    <div class="seg" id="s-size" style="width:max-content"><button type="button" data-s="normal">Normal</button><button type="button" data-s="gross">Gross</button></div>
+    <div class="hintline">Gross = breitere und höhere Karten mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.</div>
+    <label>Kategorien (höchstens ${MAXCATS}; die Reihenfolge bestimmt die Bahnen)</label><div id="s-cats"></div>
+    <div style="margin-top:.6rem"><button class="btn" id="s-add">+ Kategorie</button></div>
+    <div class="actions"><span class="sp"></span><span class="err" id="s-err"></span><button class="btn" id="s-cancel">Abbrechen</button><button class="btn primary" id="s-save">Speichern</button></div>`;
+  $('#s-titel').value = SET.titel; $('#s-titel').oninput = () => SET.titel = $('#s-titel').value;
+  document.querySelectorAll('#s-size button').forEach(b => { b.classList.toggle('on', (b.dataset.s === 'gross') === SET.gross); b.onclick = () => { SET.gross = b.dataset.s === 'gross'; renderSettings(); }; });
+  const box = $('#s-cats');
+  SET.cats.forEach((c, i) => {
+    const r = el('div', 'catrow'); const sws = el('div', 'sws');
+    PALETTE.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; renderSettings(); }; sws.append(b); });
+    const inp = el('input'); inp.type = 'text'; inp.value = c.name; inp.oninput = () => c.name = inp.value;
+    const up = el('button', 'mini'); up.textContent = '↑'; up.disabled = i === 0; up.onclick = () => { [SET.cats[i-1], SET.cats[i]] = [SET.cats[i], SET.cats[i-1]]; renderSettings(); };
+    const dn = el('button', 'mini'); dn.textContent = '↓'; dn.disabled = i === SET.cats.length - 1; dn.onclick = () => { [SET.cats[i+1], SET.cats[i]] = [SET.cats[i], SET.cats[i+1]]; renderSettings(); };
+    const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = c.id && used(c.id) ? `${used(c.id)} Ereignis(se) verlieren ihre Kategorie` : 'Entfernen';
+    rm.onclick = () => { const n = c.id ? used(c.id) : 0; if (n && !confirm(`${n} Ereignis(se) verlieren die Kategorie «${c.name}». Trotzdem entfernen?`)) return; SET.cats.splice(i, 1); renderSettings(); };
+    r.append(sws, inp, up, dn, rm); box.append(r);
+  });
+  $('#s-add').disabled = SET.cats.length >= MAXCATS;
+  $('#s-add').onclick = () => { const free = PALETTE.find(p => !SET.cats.some(c => c.farbe === p)) || PALETTE[0]; SET.cats.push({ id:'', name:'Neue Kategorie', farbe:free }); renderSettings(); };
+  $('#s-x').onclick = $('#s-cancel').onclick = () => $('#settings').hidden = true;
+  $('#s-save').onclick = async () => {
+    if (SET.cats.some(c => !c.name.trim())) return $('#s-err').textContent = 'Jede Kategorie braucht einen Namen.';
+    const ids = new Set(SET.cats.map(c => c.id).filter(Boolean)); const out = [];
+    for (const c of SET.cats){
+      let id = c.id; if (!id){ let b = slug(c.name) || 'kategorie', n = 2; id = b; while (ids.has(id)) id = `${b}-${n++}`; ids.add(id); }
+      out.push({ id, name: c.name.trim(), farbe: c.farbe });
+    }
+    S.data.titel = SET.titel.trim() || S.src.name; S.data.kategorien = out;
+    if (SET.gross) S.data.kartengroesse = 'gross'; else delete S.data.kartengroesse;
+    S.data.events.forEach(e => { if (e.kategorie && !ids.has(e.kategorie)) delete e.kategorie; });
+    $('#ttl').textContent = S.data.titel; document.title = S.data.titel + ' – Zeitstrahl';
+    [...S.hidden].forEach(h => { if (!ids.has(h)) S.hidden.delete(h); });
+    $('#settings').hidden = true; refresh(); await saveData();
+  };
+}
+$('#settings').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); $('#settings').hidden = true; } });
+
+/* ========== Stories (roter Faden) ========== */
+function syncStorySelect(){
+  const sel = $('#storySel'), stories = (S.data && S.data.stories) || [];
+  sel.hidden = stories.length === 0;
+  sel.innerHTML = `<option value="">Story</option>` + stories.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+  sel.value = S.story ? S.story.id : '';
+  sel.classList.toggle('active', !!S.story);
+}
+function activateStory(id){
+  const story = id ? (S.data.stories || []).find(s => s.id === id) : null;
+  S.story = story ? { id: story.id, name: story.name,
+    ids: story.events.filter(x => S.byId[x]).sort((a, b) => S.byId[a].pos - S.byId[b].pos), set: new Set(story.events) } : null;
+  syncStorySelect(); layout();
+  const first = S.story && S.story.ids.length ? S.byId[S.story.ids[0]] : null;
+  if (first) select(first); else { S.sel = null; caption(null); }
+}
+/* Fokus nach der Auswahl wieder freigeben — sonst gehen die Pfeiltasten im <select> verloren statt zum Zeitstrahl */
+$('#storySel').onchange = () => { activateStory($('#storySel').value || null); $('#storySel').blur(); };
+
+const STO = { mode:'list', editing:null, catHidden:new Set() };
+function openStories(){
+  if (!S.data || !S.src.canWrite) return;
+  S.data.stories = S.data.stories || []; STO.mode = 'list';
+  renderStories(); $('#stories').hidden = false;
+}
+function renderStories(){
+  const sh = $('#storysheet');
+  if (STO.mode === 'list'){
+    const stories = S.data.stories;
+    sh.innerHTML = `<button class="sheet-x" id="st-x" aria-label="Schliessen">✕</button><h2>Stories verwalten</h2>
+      <p class="hintline">Eine Story ist eine Auswahl von Ereignissen, die du beim Präsentieren einzeln durchklickst — verbunden durch einen roten Faden. Der Rest des Zeitstrahls bleibt sichtbar, nur gedimmt.</p>
+      <div id="st-list"></div>
+      <div style="margin-top:.8rem"><button class="btn" id="st-add">+ Neue Story</button></div>
+      <div class="actions"><span class="sp"></span><button class="btn" id="st-close">Schliessen</button></div>`;
+    const list = $('#st-list');
+    if (!stories.length) list.innerHTML = '<p class="mute">Noch keine Story angelegt.</p>';
+    stories.forEach(s => {
+      const row = el('div', 'catrow');
+      const name = el('span'); name.style.flex = '1'; name.textContent = `${s.name} (${s.events.length} Ereignis${s.events.length === 1 ? '' : 'se'})`;
+      const edit = el('button', 'mini'); edit.textContent = 'Bearbeiten';
+      edit.onclick = () => { STO.mode = 'edit'; STO.editing = { id:s.id, name:s.name, events:new Set(s.events) }; STO.catHidden = new Set(); renderStories(); };
+      const del = el('button', 'mini'); del.textContent = '✕'; del.title = 'Löschen';
+      del.onclick = async () => {
+        if (!confirm(`Story «${s.name}» löschen?`)) return;
+        S.data.stories = S.data.stories.filter(x => x.id !== s.id); if (S.story && S.story.id === s.id) activateStory(null);
+        syncStorySelect(); layout(); renderStories(); await saveData();
+      };
+      row.append(name, edit, del); list.append(row);
+    });
+    $('#st-x').onclick = $('#st-close').onclick = () => $('#stories').hidden = true;
+    $('#st-add').onclick = () => { STO.mode = 'edit'; STO.editing = { id:'', name:'Neue Story', events:new Set() }; STO.catHidden = new Set(); renderStories(); };
+  } else {
+    const ev = STO.editing; let onlySel = false;
+    sh.innerHTML = `<button class="sheet-x" id="st-x" aria-label="Schliessen">✕</button><h2>${ev.id ? 'Story bearbeiten' : 'Neue Story'}</h2>
+      <label>Name</label><input type="text" id="st-name">
+      <label>Ereignisse (chronologisch — Häkchen setzen, was zur Story gehört)</label>
+      <input type="text" id="st-search" placeholder="Suchen nach Titel oder Jahr …" autocomplete="off">
+      <div id="st-catfilter" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem"></div>
+      <div style="display:flex;align-items:center;gap:.7rem;margin-top:.6rem">
+        <span class="hintline" id="st-count" style="margin:0"></span><button class="mini" id="st-onlysel">Nur Ausgewählte anzeigen</button>
+      </div>
+      <div id="st-events" style="max-height:14rem;overflow:auto;border:1px solid var(--line);border-radius:.4rem;padding:.4rem .7rem;margin-top:.5rem"></div>
+      <div class="actions">${ev.id ? '<button class="btn danger" id="st-del">Löschen</button>' : ''}<span class="sp"></span><span class="err" id="st-err"></span>
+        <button class="btn" id="st-cancel">Abbrechen</button><button class="btn primary" id="st-save">Speichern</button></div>`;
+    $('#st-name').value = ev.name;
+    const catBox = $('#st-catfilter');
+    S.data.kategorien.forEach(c => {
+      const chip = el('button', 'chip' + (STO.catHidden.has(c.id) ? ' off' : '')); chip.type = 'button';
+      chip.style.setProperty('--c', c.farbe); chip.textContent = c.name;
+      chip.onclick = () => { STO.catHidden.has(c.id) ? STO.catHidden.delete(c.id) : STO.catHidden.add(c.id); chip.classList.toggle('off'); renderEventList(); };
+      catBox.append(chip);
+    });
+    function renderEventList(){
+      const q = $('#st-search').value.trim().toLowerCase();
+      const box = $('#st-events'); box.textContent = '';
+      const list = S.events.filter(e => {
+        if (onlySel) return ev.events.has(e.id);
+        if (e.kat && STO.catHidden.has(e.kat)) return false;
+        if (q && !`${e.titel} ${fmtEvent(e)}`.toLowerCase().includes(q)) return false;
+        return true;
+      });
+      if (!list.length) box.innerHTML = `<p class="mute">${S.events.length ? 'Nichts gefunden.' : 'Noch keine Ereignisse vorhanden.'}</p>`;
+      list.forEach(e => {
+        const row = el('label'); row.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.3rem 0;cursor:pointer';
+        const cb = el('input'); cb.type = 'checkbox'; cb.checked = ev.events.has(e.id);
+        cb.onchange = () => { cb.checked ? ev.events.add(e.id) : ev.events.delete(e.id); updateCount(); if (onlySel) renderEventList(); };
+        const dot = el('span'); dot.style.cssText = `width:.6rem;height:.6rem;border-radius:50%;flex:none;background:${(S.cats[e.kat] || {}).farbe || '#6a675f'}`;
+        const txt = el('span'); txt.textContent = `${fmtEvent(e)} — ${e.titel}`;
+        row.append(cb, dot, txt); box.append(row);
+      });
+      updateCount();
+    }
+    function updateCount(){ $('#st-count').textContent = `${ev.events.size} von ${S.events.length} ausgewählt`; }
+    $('#st-search').oninput = renderEventList;
+    $('#st-onlysel').onclick = () => {
+      onlySel = !onlySel; $('#st-onlysel').classList.toggle('on', onlySel);
+      $('#st-onlysel').textContent = onlySel ? 'Alle anzeigen' : 'Nur Ausgewählte anzeigen'; renderEventList();
+    };
+    renderEventList();
+    $('#st-x').onclick = $('#st-cancel').onclick = () => { STO.mode = 'list'; renderStories(); };
+    const del = $('#st-del');
+    if (del) del.onclick = async () => {
+      if (!confirm(`Story «${ev.name}» löschen?`)) return;
+      S.data.stories = S.data.stories.filter(x => x.id !== ev.id); if (S.story && S.story.id === ev.id) activateStory(null);
+      STO.mode = 'list'; syncStorySelect(); layout(); renderStories(); await saveData();
+    };
+    $('#st-save').onclick = async () => {
+      const name = $('#st-name').value.trim(); if (!name) return $('#st-err').textContent = 'Name fehlt.';
+      if (!ev.events.size) return $('#st-err').textContent = 'Mindestens ein Ereignis auswählen.';
+      let id = ev.id;
+      if (!id){ const ids = new Set((S.data.stories || []).map(x => x.id)); let b = slug(name) || 'story', n = 2; id = b; while (ids.has(id)) id = `${b}-${n++}`; }
+      const rec = { id, name, events:[...ev.events] };
+      S.data.stories = S.data.stories || [];
+      const i = S.data.stories.findIndex(x => x.id === id);
+      if (i >= 0) S.data.stories[i] = rec; else S.data.stories.push(rec);
+      STO.mode = 'list'; syncStorySelect(); if (S.story && S.story.id === id) activateStory(id); renderStories(); await saveData();
+    };
+  }
+}
+$('#stories').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); $('#stories').hidden = true; } });
+
+/* ========== Bearbeiten-Modus ========== */
+function setEditing(on){
+  if (on && !(S.src && S.src.canWrite)) return;
+  S.editing = on; document.body.classList.toggle('editing', on);
+  $('#btnEdit').textContent = on ? 'Fertig' : 'Bearbeiten'; $('#btnAdd').hidden = !on;
+  $('#mSettings').disabled = $('#mStories').disabled = !(S.src && S.src.canWrite);
+  caption(S.sel);
+  if (on && S.src.demo) setStatus('Beispiel: Änderungen werden nicht gespeichert', false, true); else setStatus('');
+}
+$('#btnEdit').onclick = () => setEditing(!S.editing);
+/* Datum-Vorgabe für eine Position auf dem Zeitstrahl; im v.-Chr.-Bereich bleibt das Jahr leer und der Schalter «v. Chr.» ist an */
+function dateAtX(x, full){
+  const v = xToDay(x);
+  if (isBc(v)) return { datum:'', bc:true };
+  const c = civilFromDays(Math.round(v)), prec = full || S.ppd >= 24 ? 'd' : S.ppd * 30.4 >= 40 ? 'm' : 'y';
+  return { datum: canon({ y:Math.max(1, c.y), bc:false, mo: prec === 'y' ? 0 : c.m, d: prec === 'd' ? c.d : 0 }) };
+}
+function newEventDefaults(){ const vp = $('#viewport'); return dateAtX(vp.scrollLeft + vp.clientWidth / 2, true); }
+$('#btnAdd').onclick = () => openEditor(null, newEventDefaults());
+$('#stage').addEventListener('dblclick', ev => {
+  if (!S.editing || ev.target.closest('.card')) return;
+  const r = $('#stage').getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+  const lane = S.view === 'bahnen' ? S.lanes.find(l => y >= l.y && y < l.y + l.h) : null;
+  openEditor(null, { ...dateAtX(x, false), kategorie: lane && lane.id || '' });
+});
+
+/* ========== Export als Zip (ohne Bibliothek, ohne Kompression — Bilder sind schon komprimiert) ========== */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crcUpdate = (c, buf) => { for (let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 255] ^ (c >>> 8); return c; };
+async function crcOf(blob){
+  let c = 0xFFFFFFFF;
+  if (blob.stream){ const r = blob.stream().getReader(); for (;;){ const { done, value } = await r.read(); if (done) break; c = crcUpdate(c, value); } }
+  else c = crcUpdate(c, new Uint8Array(await blob.arrayBuffer()));
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function dosDateTime(ms){
+  const d = new Date(ms || Date.now()), y = Math.max(1980, d.getFullYear());
+  return { time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date: ((y - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate() };
+}
+async function buildZip(root, entries, onProgress){
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0, n = 0;
+  const u16 = (v, a, i) => { a[i] = v & 255; a[i + 1] = (v >>> 8) & 255; };
+  const u32 = (v, a, i) => { a[i] = v & 255; a[i + 1] = (v >>> 8) & 255; a[i + 2] = (v >>> 16) & 255; a[i + 3] = (v >>> 24) & 255; };
+  for (const { path, blob } of entries){
+    const name = enc.encode(root + '/' + path), size = blob.size, crc = await crcOf(blob), t = dosDateTime(blob.lastModified);
+    if (size >= 0xFFFFFFFF || offset >= 0xFFFFFFFF) throw new Error('Die Daten sind für eine Zip-Datei zu gross (über 4 GB). Bitte den Ordner direkt kopieren.');
+    const lh = new Uint8Array(30 + name.length);
+    u32(0x04034b50, lh, 0); u16(20, lh, 4); u16(0x0800, lh, 6); u16(0, lh, 8); u16(t.time, lh, 10); u16(t.date, lh, 12);
+    u32(crc, lh, 14); u32(size, lh, 18); u32(size, lh, 22); u16(name.length, lh, 26); u16(0, lh, 28); lh.set(name, 30);
+    parts.push(lh, blob);
+    const ch = new Uint8Array(46 + name.length);
+    u32(0x02014b50, ch, 0); u16(20, ch, 4); u16(20, ch, 6); u16(0x0800, ch, 8); u16(0, ch, 10); u16(t.time, ch, 12); u16(t.date, ch, 14);
+    u32(crc, ch, 16); u32(size, ch, 20); u32(size, ch, 24); u16(name.length, ch, 28); u32(0, ch, 30); u32(0, ch, 34); u32(0, ch, 38); u32(offset, ch, 42); ch.set(name, 46);
+    central.push(ch);
+    offset += lh.length + size; n++;
+    if (onProgress) onProgress(n, entries.length);
+  }
+  if (n >= 0xFFFF || offset >= 0xFFFFFFFF) throw new Error('Zu viele oder zu grosse Dateien für eine Zip-Datei. Bitte den Ordner direkt kopieren.');
+  const end = new Uint8Array(22);
+  u32(0x06054b50, end, 0); u16(n, end, 8); u16(n, end, 10); u32(central.reduce((a, c) => a + c.length, 0), end, 12); u32(offset, end, 16);
+  return new Blob([...parts, ...central, end], { type:'application/zip' });
+}
+async function exportZip(){
+  if (!S.data) return;
+  const adm = $('#admin');
+  try {
+    adm.classList.add('show'); setStatus('Export läuft …', false, true);
+    await saveChain;                                            // ausstehende Speicherungen abwarten
+    const paths = (await S.src.list()).filter(p => !skipExport(p)).sort();
+    const entries = [];
+    for (const path of paths) entries.push({ path, blob: await S.src.file(path) });
+    const root = slug(S.data.titel || S.src.name) || 'zeitstrahl';
+    const blob = await buildZip(root, entries, (i, n) => setStatus(`Export … ${i}/${n}`, false, true));
+    const t = new Date(), stamp = `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
+    const a = el('a'); a.href = URL.createObjectURL(blob); a.download = `${root}-${stamp}.zip`; document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 20000);
+    setStatus(`✓ Export: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
+  } catch (err){ setStatus('FEHLER beim Export', true); alert('Export fehlgeschlagen:\n' + err.message); }
+  finally { setTimeout(() => adm.classList.remove('show'), 5000); }
+}
+
+/* ========== Menü ========== */
+$('#btnMenu').onclick = ev => { ev.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
+document.addEventListener('click', ev => { if (!ev.target.closest('#menu')) $('#menu').hidden = true; });
+$('#mFolder').onclick = () => { if (S.dirty && !confirm('Es gibt ungesicherte Änderungen. Trotzdem zu einem anderen Zeitstrahl wechseln?')) return; $('#menu').hidden = true; $('#verwarn').hidden = true; if (S.editing) setEditing(false); S.data = null; $('#welcome').hidden = false; $('#viewtools').hidden = true; $('#admin').hidden = true; closeDetail(); };
+$('#mSettings').onclick = () => { $('#menu').hidden = true; openSettings(); };
+$('#mStories').onclick = () => { $('#menu').hidden = true; openStories(); };
+$('#mExport').onclick = () => { $('#menu').hidden = true; exportZip(); };
+$('#mSave').onclick = () => { $('#menu').hidden = true; saveFile(); };
+$('#btnSave').onclick = saveFile;
+$('#mTheme').onclick = () => { $('#menu').hidden = true; toggleTheme(); };
+$('#mFs').onclick = () => { $('#menu').hidden = true; toggleFs(); };
+
+/* ========== Tastatur, Rad, Fenster ========== */
+document.addEventListener('keydown', ev => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || ev.target.isContentEditable) return;
+  if (ev.metaKey || ev.ctrlKey || ev.altKey || !S.data) return;
+  if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden) return;
+  const k = ev.key, vp = $('#viewport');
+  if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else select(null, false); }
+  else if (k === 'ArrowRight' || k === 'ArrowLeft'){ ev.preventDefault(); step(k === 'ArrowRight' ? 1 : -1); if (S.det && S.sel) openDetail(S.sel); }
+  else if (k === 'Enter' && S.sel && !S.det){ ev.preventDefault(); openDetail(S.sel); }
+  else if ((k === 'e' || k === 'E') && S.editing && S.sel){ ev.preventDefault(); openEditor(S.sel); }
+  else if ((k === 'n' || k === 'N') && S.editing){ ev.preventDefault(); openEditor(null, newEventDefaults()); }
+  else if (k === '+' || k === '=') setZoom(S.ppd * 1.4, vp.clientWidth / 2);
+  else if (k === '-') setZoom(S.ppd / 1.4, vp.clientWidth / 2);
+  else if (k === '0') overview();
+  else if (k === 'b' || k === 'B') setView(S.view === 'achse' ? 'bahnen' : 'achse');
+  else if ((k === 's' || k === 'S') && (S.data.stories || []).length){ ev.preventDefault(); const sel = $('#storySel'); try { sel.showPicker(); } catch { sel.focus(); } }
+  else if (k === 'Home' && stepList().length){ ev.preventDefault(); select(stepList()[0]); }
+  else if (k === 'End' && stepList().length){ ev.preventDefault(); const l = stepList(); select(l[l.length - 1]); }
+  else if (k === 't' || k === 'T') toggleTheme();
+  else if (k === 'f' || k === 'F') toggleFs();
+});
+$('#viewport').addEventListener('wheel', ev => {
+  const vp = $('#viewport');
+  if (ev.ctrlKey || ev.metaKey){
+    ev.preventDefault();
+    const dy = Math.max(-50, Math.min(50, ev.deltaY));
+    setZoom(S.ppd * Math.exp(-dy * .006), ev.clientX - vp.getBoundingClientRect().left);
+  } else if (!ev.shiftKey && Math.abs(ev.deltaY) > Math.abs(ev.deltaX) && vp.scrollHeight <= vp.clientHeight + 2){
+    ev.preventDefault(); vp.scrollLeft += ev.deltaY;
+  }
+}, { passive:false });
+let tk = 0; $('#viewport').addEventListener('scroll', () => { cancelAnimationFrame(tk); tk = requestAnimationFrame(renderTicks); hideTip(); });
+let rt = 0; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.data) layout(); }, 150); });
+$('#zIn').onclick = () => setZoom(S.ppd * 1.4, $('#viewport').clientWidth / 2);
+$('#zOut').onclick = () => setZoom(S.ppd / 1.4, $('#viewport').clientWidth / 2);
+$('#zAll').onclick = overview;
+
+/* ========== Thema, Vollbild ========== */
+function toggleTheme(){
+  const d = document.documentElement, n = d.dataset.theme === 'dark' ? 'light' : 'dark';
+  d.dataset.theme = n; try { localStorage.setItem('zeitstrahl-theme', n); } catch {}
+}
+function toggleFs(){ if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+try { const t = localStorage.getItem('zeitstrahl-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+
+/* ========== Warnung, wenn der Zeitstrahl von einer neueren App-Version stammt ========== */
+const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
+function checkVersion(data){
+  const w = $('#verwarn'), v = data && data.appVersion;
+  if (v && /^\d+(\.\d+)*$/.test(String(v)) && cmpVer(v, VERSION) > 0){
+    $('#verwarn-t').textContent = `Dieser Zeitstrahl wurde mit einer neueren App-Version (${v}) gespeichert, deine App ist ${VERSION}. Bitte zeitstrahl.html aktualisieren, sonst können Ereignisse oder Einstellungen fehlen.`;
+    w.hidden = false;
+  } else w.hidden = true;
+}
+$('#verwarn-x').onclick = () => { $('#verwarn').hidden = true; if (S.data) layout(); };
+
+/* ========== Version anzeigen (Menü «⋯» unten und Startbildschirm) ========== */
+{ const d = VERSION_DATE.split('-').reverse().join('.');
+  $('#mInfo').innerHTML = `Zeitstrahl · Version ${esc(VERSION)} (${d})<br>Autor: ${esc(AUTHOR)}`;
+  $('#wInfo').textContent = `Version ${VERSION} (${d}) · Autor: ${AUTHOR}`; }
+
+/* ========== Datei-Modus: Zip öffnen, Sichern (iPad: Teilen-Menü), Entwurf ========== */
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const MIME = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', svg:'image/svg+xml', avif:'image/avif', md:'text/markdown', json:'application/json' };
+const mimeOf = n => MIME[(String(n).split('.').pop() || '').toLowerCase()] || '';
+/* Zip lesen (ohne Bibliothek): unkomprimierte Einträge ohne Kopie, komprimierte (z.B. von Windows/macOS) über DecompressionStream */
+async function unzipBlob(blob){
+  const size = blob.size, tailLen = Math.min(size, 65557);
+  const tail = new DataView(await blob.slice(size - tailLen, size).arrayBuffer());
+  let eo = -1; for (let i = tailLen - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50){ eo = i; break; }
+  if (eo < 0) throw new Error('Das ist keine gültige Zip-Datei.');
+  const n = tail.getUint16(eo + 10, true), cdSize = tail.getUint32(eo + 12, true), cdOff = tail.getUint32(eo + 16, true);
+  if (n === 0xFFFF || cdOff === 0xFFFFFFFF) throw new Error('Zip-Dateien über 4 GB werden nicht unterstützt.');
+  const cd = new DataView(await blob.slice(cdOff, cdOff + cdSize).arrayBuffer()), dec = new TextDecoder(), raw = [];
+  for (let i = 0, p = 0; i < n; i++){
+    if (cd.getUint32(p, true) !== 0x02014b50) throw new Error('Beschädigte Zip-Datei.');
+    const method = cd.getUint16(p + 10, true), csize = cd.getUint32(p + 20, true), nl = cd.getUint16(p + 28, true), el2 = cd.getUint16(p + 30, true), cl = cd.getUint16(p + 32, true), off = cd.getUint32(p + 42, true);
+    raw.push({ name: dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nl)), method, csize, off }); p += 46 + nl + el2 + cl;
+  }
+  const clean = raw.filter(e => !e.name.endsWith('/') && !/(^|\/)(__MACOSX|\.DS_Store)(\/|$)/.test(e.name) && !/(^|\/)\._/.test(e.name));
+  const j = clean.filter(e => /(^|\/)zeitstrahl\.json$/.test(e.name)).sort((a, b) => a.name.split('/').length - b.name.split('/').length)[0];
+  if (!j) throw new Error('In dieser Zip-Datei fehlt die Datei zeitstrahl.json. Ist es eine Zip aus «Exportieren für Backup»?');
+  const prefix = j.name.slice(0, j.name.length - 'zeitstrahl.json'.length), files = new Map();
+  for (const e of clean){
+    if (!e.name.startsWith(prefix)) continue;
+    const rel = e.name.slice(prefix.length); if (!rel || skipExport(rel)) continue;
+    const lh = new DataView(await blob.slice(e.off, e.off + 30).arrayBuffer());
+    if (lh.getUint32(0, true) !== 0x04034b50) throw new Error('Beschädigte Zip-Datei.');
+    const start = e.off + 30 + lh.getUint16(26, true) + lh.getUint16(28, true), type = mimeOf(rel);
+    if (e.method === 0) files.set(rel, blob.slice(start, start + e.csize, type));
+    else if (e.method === 8){
+      if (typeof DecompressionStream === 'undefined') throw new Error('Dieser Browser kann komprimierte Zip-Dateien nicht lesen. Bitte eine Zip aus «Exportieren für Backup» verwenden.');
+      const out = await new Response(blob.slice(start, start + e.csize).stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+      files.set(rel, new Blob([out], { type }));
+    } else throw new Error('Nicht unterstütztes Zip-Format (Methode ' + e.method + ').');
+  }
+  return files;
+}
+async function openZipFile(file){
+  try { const files = await unzipBlob(file); await loadFrom(new ZipSource(String(file.name || 'Zeitstrahl').replace(/\.zip$/i, ''), files)); }
+  catch (err){ alert('Die Datei konnte nicht geöffnet werden:\n' + err.message); }
+}
+function newInMemory(){
+  const t = (prompt('Titel des neuen Zeitstrahls?', 'Mein Zeitstrahl') || '').trim(); if (!t) return Promise.resolve();
+  const files = new Map([['zeitstrahl.json', new Blob([JSON.stringify(newData(t), null, 2)], { type:'application/json' })]]);
+  return loadFrom(new ZipSource(t, files)).then(() => { S.dirty = true; updateFileStatus(); scheduleZip(); scheduleDraft(); });
+}
+function updateFileStatus(){
+  if (!S.src || !S.src.fileMode) return;
+  const fs = $('#fileStatus');
+  if (S.dirty){ fs.textContent = '● Ungesichert'; fs.className = 'dirty'; }
+  else if (S.savedAt){ fs.textContent = '✓ Gesichert ' + S.savedAt.toTimeString().slice(0, 5); fs.className = ''; }
+  else { fs.textContent = ''; fs.className = ''; }
+  $('#btnSave').className = 'btn' + (S.dirty ? ' primary' : '');
+}
+/* Zip im Voraus vorbereiten: Das Teilen-Menü des iPad darf nur direkt nach dem Tippen geöffnet werden, ein langes Warten dazwischen blockiert es */
+let zipTimer = 0, draftTimer = 0;
+function scheduleZip(){ clearTimeout(zipTimer); S.zipReady = null; S.zipVer++; zipTimer = setTimeout(() => prepareZip().catch(() => {}), 1200); }
+async function prepareZip(){
+  const src = S.src; if (!src || !src.fileMode) return null;
+  const ver = ++S.zipVer; await saveChain;
+  const entries = []; for (const path of (await src.list()).sort()) entries.push({ path, blob: await src.file(path) });
+  const root = slug(S.data.titel || src.name) || 'zeitstrahl', blob = await buildZip(root, entries);
+  if (ver === S.zipVer && S.src === src) S.zipReady = { blob, name: `zeitstrahl-${root}.zip` };
+  return S.zipReady;
+}
+async function deliverFile(blob, name){
+  const f = new File([blob], name, { type:'application/zip' });
+  if (matchMedia('(hover:none)').matches && navigator.canShare && navigator.canShare({ files:[f] })){
+    try { await navigator.share({ files:[f], title:name }); return 'share'; }
+    catch (e){ if (e && e.name === 'AbortError') return 'abort'; if (e && e.name === 'NotAllowedError') return 'blocked'; }
+  }
+  const a = el('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 30000);
+  return 'download';
+}
+async function saveFile(){
+  if (!S.src || !S.src.fileMode) return;
+  const b = $('#btnSave');
+  try {
+    await saveChain;
+    if (!S.zipReady){ b.disabled = true; b.textContent = 'Wird vorbereitet …'; try { await prepareZip(); } finally { b.disabled = false; b.textContent = 'Sichern'; } }
+    const z = S.zipReady; if (!z) throw new Error('Die Datei konnte nicht vorbereitet werden.');
+    const how = await deliverFile(z.blob, z.name);
+    if (how === 'blocked'){ setStatus('Datei ist bereit: bitte nochmals «Sichern» tippen', false, true); return; }
+    if (how !== 'abort'){ S.dirty = false; S.savedAt = new Date(); setStatus(''); persistDraft(); }
+    updateFileStatus();
+  } catch (err){ b.disabled = false; b.textContent = 'Sichern'; setStatus('FEHLER beim Sichern', true); alert('Sichern fehlgeschlagen:\n' + err.message); }
+}
+/* Entwurf im Browser: nur ein Notnagel (Safari kann Browser-Speicher nach längerer Pause löschen) — verlassen soll man sich auf «Sichern» */
+function scheduleDraft(){ clearTimeout(draftTimer); draftTimer = setTimeout(persistDraft, 2000); }
+async function persistDraft(){
+  const src = S.src; if (!src || !src.fileMode || !S.data) return;
+  try { const files = []; for (const p of await src.list()) files.push([p, await src.file(p)]);
+    await idbSet('entwurf', { name: src.name, titel: S.data.titel, at: Date.now(), dirty: S.dirty, files }); } catch {}
+}
+function resumeDraft(dr){ return loadFrom(new ZipSource(dr.name, new Map(dr.files))).then(() => { S.dirty = !!dr.dirty; updateFileStatus(); if (S.dirty) scheduleZip(); }); }
+const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'gerade eben' : m < 60 ? `vor ${m} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : `vor ${Math.round(m / 1440)} Tagen`; };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persistDraft(); });
+addEventListener('pagehide', persistDraft);
+addEventListener('beforeunload', ev => { if (S.src && S.src.fileMode && S.dirty){ ev.preventDefault(); ev.returnValue = ''; } });
+
+/* ========== Start / Ordner öffnen ========== */
+async function openFolder(){
+  if (!window.showDirectoryPicker){ $('#dirInput').click(); return; }
+  let h; try { h = await showDirectoryPicker({ mode:'readwrite' }); } catch { return; }
+  await idbSet('last', h); loadFrom(new DirSource(h));
+}
+$('#dirInput').onchange = ev => { const f = [...ev.target.files]; if (f.length) loadFrom(new ListSource(f)); ev.target.value = ''; };
+$('#btnOpen').onclick = openFolder;
+$('#btnDemo').onclick = () => loadFrom(new DemoSource(DEMO));
+$('#btnZip').onclick = () => $('#zipInput').click();
+$('#zipInput').onchange = ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) openZipFile(f); };
+$('#btnNew').onclick = newInMemory;
+(async () => {
+  const canFolder = !!window.showDirectoryPicker, ios = isIOS();
+  $('#btnOpen').hidden = ios && !canFolder;                   // das iPad kennt keinen Ordnerzugriff
+  $('#btnNew').hidden = canFolder; if (ios) $('#btnNew').className = 'btn primary';
+  if (!canFolder) $('#warn').textContent = ios ? 'Auf dem iPad: «Neuer Zeitstrahl» oder «Zip-Datei öffnen». Gesichert wird mit «Sichern» (Teilen-Menü: Dateien, OneDrive, Teams).' : 'Dieser Browser kann nicht in Ordnern speichern. Starte mit «Neuer Zeitstrahl» oder «Zip-Datei öffnen».';
+  const h = await idbGet('last');
+  if (h && h.kind === 'directory'){
+    const b = $('#btnLast'); b.querySelector('span').textContent = h.name; b.hidden = false;
+    b.onclick = async () => {
+      try {
+        let p = await h.queryPermission({ mode:'readwrite' });
+        if (p !== 'granted') p = await h.requestPermission({ mode:'readwrite' });
+        if (p === 'granted') loadFrom(new DirSource(h));
+      } catch (err){ alert('Ordner nicht mehr erreichbar. Bitte neu auswählen.'); }
+    };
+  }
+  const dr = await idbGet('entwurf');
+  if (dr && Array.isArray(dr.files) && dr.files.length){
+    const b = $('#btnDraft'); b.querySelector('span').textContent = `«${dr.titel || dr.name}», ${ago(dr.at)}${dr.dirty ? ' (ungesichert)' : ''}`; b.hidden = false; $('#btnDraftX').hidden = false;
+    b.onclick = () => resumeDraft(dr);
+    $('#btnDraftX').onclick = async () => { if (confirm('Entwurf verwerfen?')){ await idbSet('entwurf', null); b.hidden = true; $('#btnDraftX').hidden = true; } };
+  }
+  caption(null);
+})();
+
+/*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#5b6770"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.2"}, "notes": {}};/*DEMO_END*/
+</script>
+</body>
+</html>

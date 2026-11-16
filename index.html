@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 1.2.1 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 1.2.2 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="1.2.1">
+<meta name="version" content="1.2.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -268,7 +268,7 @@ button{touch-action:manipulation}
 <script>
 'use strict';
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '1.2.1', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+const VERSION = '1.2.2', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
 /* ========== Hilfen ========== */
 const $ = s => document.querySelector(s);
 const el = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
@@ -561,6 +561,8 @@ function recomputeSpan(){
   if (ad.length){ S.t0 = Math.min(...ad) - 30; S.tmax = Math.max(...ad) + 30; }
   else if (S.bcYears.length){ S.t0 = daysFromCivil(1, 1, 1); S.tmax = S.t0 + 365; }
   else { S.t0 = today - 395; S.tmax = today + 395; }
+  const minSpan = MIN_VIEW_YEARS * 365.25;                       // zu kurze Achse symmetrisch auf die Mindestspanne verlängern
+  if (S.tmax - S.t0 < minSpan){ const c = (S.t0 + S.tmax) / 2; S.t0 = Math.max(daysFromCivil(1, 1, 1), c - minSpan / 2); S.tmax = S.t0 + minSpan; }
   updateMetrics();
 }
 function setData(src, data){
@@ -583,11 +585,11 @@ function setData(src, data){
   $('#btnEdit').title = src.canWrite ? '' : 'Dieser Ordner ist nur lesbar (Firefox/Safari). Zum Bearbeiten Chrome oder Edge verwenden.';
   setEditing(false);
   recomputeSpan();
-  S.ppd = isLongSpan() ? overviewPpd() : Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .7 / 365));
+  S.ppd = isLongSpan() ? overviewPpd() : initialPpd();
   $('#empty').hidden = S.events.length > 0;
   checkVersion(data);
   buildLegend(); syncViewButtons(); syncStorySelect(); syncZoomLabel(); layout(); caption(null);
-  const vp = $('#viewport'); vp.scrollLeft = endScrollLeft(); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts
+  const vp = $('#viewport'); vp.scrollLeft = Math.max(endScrollLeft(), dayToX(S.t0) - vpW() * .04); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts (kurze Zeitstrahlen: ganze Achse)
   renderTicks();
 }
 function buildLegend(){
@@ -848,6 +850,9 @@ const OVERVIEW_YEARS = 100;
 const overviewWin = () => OVERVIEW_YEARS * 365.25;
 const isLongSpan = () => S.tmax - S.t0 > overviewWin() * 1.2;
 const overviewPpd = () => Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / overviewWin()));
+/* Die Achse und die Startansicht zeigen immer mindestens so viele Jahre — sonst sieht ein neuer Zeitstrahl mit einem Ereignis nur einzelne Tage */
+const MIN_VIEW_YEARS = 5;
+const initialPpd = () => Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / (MIN_VIEW_YEARS * 365.25)));
 /* Scrollposition, bei der das Ende des Zeitstrahls (neuestes Ereignis samt Karte) ganz rechts sichtbar ist */
 const endScrollLeft = () => Math.max(0, S.contentRight + 2 * (S.geo ? S.geo.rem : 16) - $('#viewport').clientWidth);
 function overview(){

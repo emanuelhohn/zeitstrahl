@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 1.5 (2026-11-16) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 1.9.1 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="1.5">
+<meta name="version" content="1.9.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -62,7 +62,7 @@ button{touch-action:manipulation}
 #searchbar button:hover{color:var(--ink)}
 @media (pointer:coarse){#searchbar input{font-size:16px}}
 @supports (height:100dvh){body{height:100dvh}}
-@media (pointer:coarse){.form input[type=text],.form textarea,.form select,#storySel{font-size:16px}}
+@media (pointer:coarse){.form input[type=text],.form input[type=password],.form textarea,.form select,#storySel,#pwin{font-size:16px}}
 /* Statusmeldungen (Gespeichert, Export, Beispiel-Hinweis, Fehler): schwebend unten in der Mitte, verschieben nichts */
 #status{position:fixed;left:50%;bottom:5.2rem;transform:translateX(-50%);z-index:35;max-width:92vw;padding:.3rem .85rem;border-radius:.5rem;background:var(--ink);color:var(--bg);font-size:.85rem;box-shadow:var(--shadow);white-space:nowrap;pointer-events:none}
 #status:empty{display:none}
@@ -112,6 +112,11 @@ button{touch-action:manipulation}
 .bahnen .tile .tz{font-size:.62rem}
 .bahnen .card .t{-webkit-line-clamp:2;font-size:.92rem}
 /* Anzeigegrösse «gross» (Einstellung) */
+.klein .card img,.klein .card .tile{display:none}
+.klein .card{padding:.3rem .6rem}
+.klein .card .d{display:none}
+.klein .card .t{font-size:.88rem}
+.klein.bahnen .card .t{font-size:.84rem}
 .gross .card .t{font-size:1.15rem}.gross .card .d{font-size:.88rem}
 .gross .card img,.gross .card .tile{width:5.8rem;height:5.8rem}
 .gross .tile .ty{font-size:1.65rem}.gross .tile .ty.s{font-size:1.3rem}.gross .tile .ty.xs{font-size:1.05rem}
@@ -140,6 +145,25 @@ button{touch-action:manipulation}
 .span.nocat{background:repeating-linear-gradient(90deg,var(--mute) 0 6px,transparent 6px 10px);opacity:.7}
 .lane-label.nocat{background:var(--bg);border:1.5px dashed var(--mute);box-shadow:none}
 #caption .cd.nocat{border-left:5px dotted var(--mute)}
+.pbar{position:absolute;display:flex;align-items:center;background:var(--c);color:#fff;border-radius:.85rem;font-size:.85rem;font-weight:600;
+  cursor:pointer;z-index:2;box-shadow:var(--shadow);white-space:nowrap}
+.pbar span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;padding:0 .7rem}
+.pbar.ic span{padding-left:1.9rem}
+.pbar .pi{position:absolute;left:-.9rem;top:50%;width:2.4rem;height:2.4rem;margin-top:-1.2rem;border-radius:50%;border:2px solid var(--bg);
+  background:var(--c);object-fit:cover;box-shadow:var(--shadow);z-index:1;flex:none}
+.pbar .pi.ini{display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;font-style:normal;color:#fff;background:color-mix(in srgb,var(--c) 82%,#000)}
+.pbar.nocat .pi.ini{background:var(--mute);color:var(--bg)}
+.cropwrap{display:flex;gap:1rem;align-items:center;margin-top:.3rem}
+.cropv{width:8rem;height:8rem;border-radius:50%;overflow:hidden;position:relative;background:var(--line);flex:none;cursor:grab;touch-action:none;border:2px solid var(--line)}
+.cropv:active{cursor:grabbing}
+.cropv img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.pbar small{font-weight:400;opacity:.9;margin-left:.35rem}
+.pbar:hover{z-index:6;filter:brightness(1.1)}
+.pbar.sel{outline:3px solid var(--accent);z-index:6}
+.pbar.out{overflow:visible}
+.pbar.out span,.pbar.out.ic span{position:absolute;left:100%;margin-left:.1rem;padding:0 .4rem;color:var(--ink);overflow:visible}
+.pbar.out small{color:var(--mute)}
+.pbar.nocat{background:var(--bg);color:var(--ink);border:1.5px dashed var(--mute);box-shadow:none}
 .dim{opacity:.25;transition:opacity .2s}
 .card.dim:hover{opacity:.6}
 .thread{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
@@ -161,12 +185,17 @@ button{touch-action:manipulation}
 #welcome h1{font-size:2.4rem;margin:0 0 .4rem}
 #welcome p{color:var(--mute);line-height:1.5}
 #welcome .btn{margin:.3rem;padding:.6rem 1.1rem;font-size:1rem}
+body.start #viewport{overflow:hidden}
+body.start #stage{visibility:hidden}
+body.start #legend{display:none}
+#pwin{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--line);border-radius:.4rem;background:var(--panel);color:var(--ink);width:14rem;max-width:100%}
+#pwerr{color:var(--danger);min-height:1.3em;margin:.3rem 0 0}
 #warn,#wMode{font-size:.85rem}
 #empty{position:absolute;left:0;right:0;top:35%;text-align:center;color:var(--mute);pointer-events:none}
 
 /* Overlays: Detail, Editor, Einstellungen */
-#detail,#editor,#settings,#pdfdlg{position:fixed;inset:0;background:var(--backdrop);z-index:40;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
-#sheet,#edsheet,#setsheet,#pdfsheet{position:relative;width:min(58rem,96vw);max-height:94vh;overflow:auto;background:var(--panel);border-radius:.8rem;
+#detail,#editor,#settings,#pdfdlg,#setupdlg{position:fixed;inset:0;background:var(--backdrop);z-index:40;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
+#sheet,#edsheet,#setsheet,#pdfsheet,#setupsheet{position:relative;width:min(58rem,96vw);max-height:94vh;overflow:auto;background:var(--panel);border-radius:.8rem;
   padding:1.6rem 2.2rem 2rem;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .sheet-x{position:absolute;top:.7rem;right:.8rem;border:0;background:none;font-size:1.3rem;cursor:pointer;color:var(--mute)}
 #sheet .meta{font-size:.95rem;color:var(--mute);display:flex;gap:.7rem;align-items:center}
@@ -192,7 +221,7 @@ button{touch-action:manipulation}
 /* Formulare */
 .form h2{margin:0 0 .6rem;font-size:1.5rem}
 .form label{display:block;font-size:.85rem;color:var(--mute);margin:.9rem 0 .25rem}
-.form input[type=text],.form textarea,.form select{width:100%;font:inherit;padding:.5rem .6rem;border:1px solid var(--line);
+.form input[type=text],.form input[type=password],.form textarea,.form select{width:100%;font:inherit;padding:.5rem .6rem;border:1px solid var(--line);
   border-radius:.4rem;background:var(--bg);color:var(--ink)}
 .form textarea{min-height:5rem;resize:vertical;line-height:1.45}
 .form .row{display:flex;gap:1rem}.form .row>div{flex:1}
@@ -225,6 +254,14 @@ button{touch-action:manipulation}
 .xpal .own input{width:2rem;height:1.5rem;padding:0;border:1px solid var(--line);border-radius:.3rem;background:none;cursor:pointer}
 .mini{border:1px solid var(--line);background:var(--panel);border-radius:.3rem;cursor:pointer;padding:.1rem .45rem}
 #pdfsheet{width:min(36rem,96vw)}
+#setupsheet{width:min(38rem,96vw)}
+.form label.kind{display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--line);border-radius:.5rem;padding:.6rem .8rem;margin:.4rem 0;cursor:pointer;font-size:1rem;color:var(--ink);font-weight:400}
+.form label.kind:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.form label.kind input{margin-top:.3rem;width:auto;flex:none}
+.form label.kind b{display:block;font-weight:700}
+.form label.kind span{display:block;color:var(--mute);font-size:.85rem}
+.examples{margin:2rem 0 .3rem;padding-top:1rem;border-top:1px solid var(--line)}
+.examples .exl{font-size:.8rem;color:var(--mute);margin-bottom:.2rem}
 .bgdot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;border:1px solid var(--mute);margin-right:.35rem;vertical-align:-.1rem}
 /* Hintergrundfarbe (nur im hellen Modus; Karten bleiben weiss) */
 :root[data-bg=milchig]:not([data-theme=dark]){--bg:#fbf5e0}
@@ -277,12 +314,12 @@ body.web #admin{opacity:1}
 </header>
 <div id="verwarn" hidden><span id="verwarn-t"></span><button id="verwarn-x" aria-label="Schliessen">✕</button></div>
 <div id="menu" hidden>
-  <button id="mFolder">Anderen Ordner öffnen …</button>
+  <button id="mFolder">Zurück zur Startseite</button>
   <button id="mSettings">Zeitstrahl-Einstellungen …</button>
   <button id="mStories">Stories verwalten …</button>
   <button id="mSave" hidden>Sichern …</button>
   <button id="mExport">Exportieren für Backup (Zip) …</button>
-  <button id="mWeb">Exportieren für GitHub Pages (Zip) …</button>
+  <button id="mWeb">Exportieren als Webseite (View Only, Zip) …</button>
   <button id="mPdf">Exportieren als PDF …</button>
   <button id="mPdfA1">Exportieren als PDF (Format A1) …</button>
   <button id="mTheme">Hell / Dunkel (T)</button>
@@ -297,12 +334,14 @@ body.web #admin{opacity:1}
     <div class="box">
       <h1>Zeitstrahl</h1>
       <p>Ein Zeitstrahl für den Unterricht. Deine Daten bleiben auf deinem Gerät, in einem Ordner oder in einer Datei. Es wird nichts ins Internet hochgeladen.</p>
-      <button class="btn primary" id="btnOpen">Zeitstrahl-Ordner öffnen …</button>
+      <button class="btn primary" id="btnOpen">Ordner öffnen …</button>
       <button class="btn" id="btnLast" hidden>Zuletzt: <span></span> – fortsetzen</button>
-      <button class="btn" id="btnNew" hidden>Neuer Zeitstrahl</button>
+      <button class="btn" id="btnNew">Neu anlegen …</button>
       <button class="btn" id="btnZip">Zip-Datei öffnen …</button>
       <button class="btn" id="btnDraft" hidden>Entwurf fortsetzen: <span></span></button><button class="mini" id="btnDraftX" hidden title="Entwurf verwerfen">✕</button>
-      <button class="btn" id="btnDemo">Beispiel ansehen</button>
+      <div class="examples"><div class="exl">Beispiele ansehen</div>
+        <button class="btn" id="btnDemo">Wirtschaftsgeschichte</button>
+        <button class="btn" id="btnDemo2">Buch: Der Process</button></div>
       <p id="wMode">Direkt in einem Ordner speichern, ganz ohne Internet, geht nur mit Google Chrome oder Microsoft Edge am Computer. Mit Safari, Firefox und auf dem iPad arbeitest du mit einer Zip-Datei und sicherst selbst mit «Sichern».</p>
       <p id="warn"></p>
       <p id="wInfo"></p>
@@ -318,6 +357,7 @@ body.web #admin{opacity:1}
 <div id="editor" hidden><div id="edsheet" class="form"></div></div>
 <div id="settings" hidden><div id="setsheet" class="form"></div></div>
 <div id="pdfdlg" hidden><div id="pdfsheet" class="form"></div></div>
+<div id="setupdlg" hidden><div id="setupsheet" class="form"></div></div>
 <div id="stories" hidden><div id="storysheet" class="form"></div></div>
 <input type="file" id="dirInput" webkitdirectory hidden>
 <input type="file" id="zipInput" accept=".zip,application/zip,application/x-zip-compressed" hidden>
@@ -327,7 +367,7 @@ body.web #admin{opacity:1}
 /* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
 const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '1.5', VERSION_DATE = '2026-11-16', AUTHOR = 'eho';
+const VERSION = '1.9.1', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
 /* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
 const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
@@ -338,6 +378,10 @@ const pad2 = n => String(n).padStart(2, '0');
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const hint = () => '← → blättern · Enter Details · Strg + Scrollen oder + / − zoomen · 0 Überblick · B Achse/Bahnen' +
   ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · / Suche · T hell/dunkel · F Vollbild';
+/* Begriffe je Art: bei Stationen heissen Ereignisse «Einträge» */
+const V = t => !S.st ? t : t.replace(/Ereignissen/g, 'Einträgen').replace(/Ereignisse/g, 'Einträge').replace(/Ereignis\(se\)/g, 'Eintrag/Einträge')
+  .replace(/Ereignis/g, 'Eintrag').replace(/auf den Zeitstrahl/g, 'auf die Achse').replace(/chronologisch/g, 'in Reihenfolge');
+const winTitle = t => S.st ? t : t + ' – Zeitstrahl';
 const HINT_EDIT = 'Bearbeiten: Klick auf Ereignis = bearbeiten · Doppelklick auf Zeitstrahl = neues Ereignis · N neu · E ausgewähltes bearbeiten';
 const PALETTE = ['#c8452f','#2b59c3','#1e7a4f','#9a6a00','#7b4fb0','#0f8b9a','#c2185b'];   /* 7 Grundfarben, Grau gehört der «Ohne Kategorie» */
 const EXTRA = ['#e4572e','#d1495b','#9c1c3d','#b5361f','#c25e0a','#a87400','#7a5c00','#8d4b2f',
@@ -354,7 +398,7 @@ const DEFAULT_CATS = () => [
   { id:'klima', name:'Klima & Umwelt', farbe:PALETTE[5] } ];
 const S = { src:null, data:null, events:[], vis:[], cats:{}, byId:{}, hidden:new Set(), ppd:1, t0:0, tmax:0, pad:0,
             minPpd:.01, maxPpd:90, sel:null, det:null, geo:null, ticksEl:null, gridEl:null, lanes:[],
-            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null, printW:0 };
+            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], st:null, contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null, printW:0 };
 function reindex(){ S.byId = {}; S.events.forEach(e => S.byId[e.id] = e); }
 const vpW = () => S.printW || $('#viewport').clientWidth || innerWidth || 1024;
 const slug = s => String(s || '').toLowerCase().replace(/\u00e4/g, 'ae').replace(/\u00f6/g, 'oe').replace(/\u00fc/g, 'ue')
@@ -401,7 +445,7 @@ function parseDate(s, end = false){
 }
 /* Speicherform: Jahre vierstellig aufgefüllt («0476»), vor Christus «200 v. Chr.» */
 const canon = p => p.bc ? `${p.y} v. Chr.` : String(p.y).padStart(4, '0') + (p.mo ? '-' + pad2(p.mo) : '') + (p.d ? '-' + pad2(p.d) : '');
-const fmt = p => p.bc ? `${p.y} v. Chr.` : p.prec === 'd' ? `${p.d}. ${MONTHS[p.mo-1]} ${p.y}` : p.prec === 'm' ? `${MONTHS[p.mo-1]} ${p.y}` : `${p.y}`;
+const fmt = p => p.st ? p.label : p.bc ? `${p.y} v. Chr.` : p.prec === 'd' ? `${p.d}. ${MONTHS[p.mo-1]} ${p.y}` : p.prec === 'm' ? `${MONTHS[p.mo-1]} ${p.y}` : `${p.y}`;
 const fmtEvent = e => e.ende === 'heute' ? `seit ${fmt(e.a)} – laufend` : e.b ? `${fmt(e.a)} – ${fmt(e.b)}` : fmt(e.a);
 /* Wie fmtEvent, aber als HTML mit «laufend» hervorgehoben — für alle sichtbaren Stellen statt reinem Text */
 const fmtEventHtml = e => e.ende === 'heute' ? `seit ${esc(fmt(e.a))} – <span class="tag-live">laufend</span>` : esc(fmtEvent(e));
@@ -512,7 +556,7 @@ async function idbGet(k){ try { const db = await idb(); return await new Promise
 async function idbSet(k, v){ try { const db = await idb(); await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch {} }
 
 /* ========== Bilder ========== */
-const assetCache = new Map(), thumbCache = new Map();
+const assetCache = new Map(), thumbCache = new Map(), iconCache = new Map(), iconDone = new Map();
 function assetUrl(path){
   if (!assetCache.has(path)) assetCache.set(path, S.src.file(path).then(f => URL.createObjectURL(f)));
   return assetCache.get(path);
@@ -536,6 +580,33 @@ function getThumb(path){
     } catch { return URL.createObjectURL(f); }
   })());
   return thumbCache.get(path);
+}
+/* Bildausschnitt: Fokus x/y in Prozent, Zoom z (1 = grösstmögliches Quadrat). Ohne Angabe: mittig, bei Hochformat oben betont. */
+const cropOf = (w, h, a) => {
+  const z = a && a.z >= 1 ? Math.min(4, a.z) : 1, side = Math.min(w, h) / z; let sx, sy;
+  if (a && isFinite(a.x) && isFinite(a.y)){ sx = a.x / 100 * w - side / 2; sy = a.y / 100 * h - side / 2; } else { sx = (w - side) / 2; sy = (h - side) * .2; }
+  return { sx: Math.max(0, Math.min(w - side, sx)), sy: Math.max(0, Math.min(h - side, sy)), side };
+};
+const cropArg = e => { const a = e.bildAusschnitt; return a && isFinite(a.x) && isFinite(a.y) ? a : null; };
+const iconKey = e => e.bild + (cropArg(e) ? `|${cropArg(e).x},${cropArg(e).y},${cropArg(e).z || 1}` : '');
+/* Porträt-Icon für Balken: quadratischer Ausschnitt (bei Hochformat mit Betonung oben, damit das Gesicht im Kreis liegt), 96 px,
+   gezeichnet aus der kleinen Vorschau — das Original wird nie geladen. Nur im Arbeitsspeicher, keine zusätzliche Datei. */
+function getIcon(path, crop, key = path){
+  if (!iconCache.has(key)) iconCache.set(key, (async () => {
+    const img = new Image(); img.src = await getThumb(path); await img.decode();
+    const n = 96, c = document.createElement('canvas'); c.width = c.height = n;
+    const r = cropOf(img.naturalWidth, img.naturalHeight, crop);
+    c.getContext('2d').drawImage(img, r.sx, r.sy, r.side, r.side, 0, 0, n, n);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .85)); if (!blob) throw new Error('kein Icon');
+    const u = URL.createObjectURL(blob); iconDone.set(key, u); return u;
+  })());
+  return iconCache.get(key);
+}
+const INI_SKIP = new Set(['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'von', 'van', 'zu', 'und', 'de', 'the']);
+function initials(t){
+  const w = String(t || '').split(/[\s\-]+/).filter(x => /^[A-ZÄÖÜÉÈÀ]/.test(x) && !INI_SKIP.has(x.toLowerCase()));
+  if (!w.length) return String(t || '').trim().slice(0, 1).toUpperCase();
+  return w.length === 1 ? w[0][0] : w[0][0] + w[w.length - 1][0];
 }
 function ensureThumb(e){
   const img = e.el.querySelector('img'); if (!img) return;
@@ -589,8 +660,41 @@ function resolveMdImages(box){
 }
 
 /* ========== Laden ========== */
+/* ----- Stationen-Achse (Kapitel, Szenen, Lernphasen …): geordnete Liste von Stationen statt Kalenderdatum.
+   Datei: data.achse = { art:'stationen', einheit, abstand:'eng'|'normal'|'weit', breitenmodus:'auto' (sonst gleichmässig), autoMax:2|4|6|8, stationen:[{ id, label, breite? }] }, Ereignisse: station, stationEnde (optional).
+   Intern ist die Position «Stationsnummer + Anteil»; die Breite einer Station (in Einheiten) ist fest (breite) oder wächst mit der Zahl ihrer Ereignisse. */
+const ST_CAP = 4, ABSTAND = { eng:.75, normal:1, weit:1.4 };
+const stationMode = data => { const a = data && data.achse; return a && a.art === 'stationen' && Array.isArray(a.stationen) && a.stationen.length ? a : null; };
+/* Auto-Breite: Balken, die nur in einer Station stehen, brauchen dort so viel Platz, dass ihr Name hineinpasst (Einheiten à ca. 16 rem) */
+const barNeedUnits = e => Math.max(1, Math.ceil(((String(e.titel).length * .5 + 1.6 + (e.bild !== 'keins' ? 1.4 : 0)) / 16) - .1));
+const stNum = (label, i) => { const m = /(\d+)\s*$/.exec(label || ''); return m ? m[1] : String(i + 1); };
+function prepareStations(data, ach, cats){
+  const list = ach.stationen.map((s, i) => ({ id:String(s.id), label:String(s.label ?? ''), i, breite: Number(s.breite) > 0 ? Number(s.breite) : 0 }));
+  const idx = new Map(list.map(s => [s.id, s.i])), per = list.map(() => []), evs = [], bars = []; let bad = 0;
+  for (const e of data.events || []){
+    const i = idx.get(e.station);
+    if (i === undefined || !e.titel){ bad++; continue; }
+    let j = idx.get(e.stationEnde); if (j === undefined || j <= i) j = null;
+    const ev = { ...e, kat: cats[e.kategorie] ? e.kategorie : null, _j:j }; ev._bar = !!(cats[e.kategorie] && cats[e.kategorie].darstellung === 'balken');
+    if (ev._bar) bars.push(ev); else per[i].push(ev); evs.push(ev);
+  }
+  const auto = ach.breitenmodus === 'auto', cap = [2, 4, 6, 8].includes(Number(ach.autoMax)) ? Number(ach.autoMax) : ST_CAP;
+  const need = list.map(() => 1); for (const ev of bars) if (ev._j == null) { const i = idx.get(ev.station); need[i] = Math.max(need[i], barNeedUnits(ev)); }
+  const w = list.map((s, i) => s.breite || (auto ? Math.min(cap, Math.max(1, per[i].length, need[i])) : 1)), cum = [0];
+  w.forEach(x => cum.push(cum[cum.length - 1] + x));
+  const mk = (s, day) => ({ st:true, label:s.label, y:stNum(s.label, s.i), ya:s.i, bc:false, day, prec:'s' });
+  per.forEach((arr, i) => arr.forEach((ev, k) => {
+    ev.a = mk(list[i], i + .5); ev.pos = i + (k + .5) / arr.length;
+    ev.b = ev._j != null ? mk(list[ev._j], ev._j + .5) : null; delete ev._j;
+  }));
+  for (const ev of bars){ const i = idx.get(ev.station), j = ev._j; ev.a = mk(list[i], i + .5); ev.pos = i + .5; ev.b = j != null ? mk(list[j], j + .5) : null; delete ev._j; }
+  for (const ev of evs) delete ev._bar;
+  evs.sort((x, y) => x.pos - y.pos);
+  return { cats, evs, bad, bcYears:[], st:{ list, idx, w, cum, tot:cum[cum.length - 1], n:list.length, abstand:ABSTAND[ach.abstand] || 1 } };
+}
 function prepare(data){
   const cats = {}; (data.kategorien || []).forEach(c => cats[c.id] = c);
+  { const ach = stationMode(data); if (ach) return prepareStations(data, ach, cats); }
   let bad = 0; const evs = [], bcSet = new Set();
   (data.events || []).forEach(e => {
     const a = parseDate(e.datum);
@@ -617,20 +721,27 @@ function uniqueId(base){
   base = base || 'ereignis'; const ids = new Set((S.data.events || []).map(e => e.id)); let id = base, n = 2;
   while (ids.has(id)) id = `${base}-${n++}`; return id;
 }
-function newData(name){ return { titel: name, kategorien: DEFAULT_CATS(), events: [], stories: [], appVersion: VERSION }; }
+const STATION_CATS = () => [{ id:'personen', name:'Personen', farbe:PALETTE[4] }, { id:'themen', name:'Themen', farbe:PALETTE[1] }];
+function newData(name, achse){
+  const d = { titel: name, kategorien: achse ? STATION_CATS() : DEFAULT_CATS(), events: [], stories: [], appVersion: VERSION };
+  if (achse) d.achse = achse;
+  return d;
+}
 async function loadFrom(src){
   let data;
   try { data = JSON.parse(await src.text('zeitstrahl.json')); }
   catch (err){
     if (err instanceof SyntaxError){ alert('zeitstrahl.json ist kein gültiges JSON:\n' + err.message); return; }
     if (src.fileMode){ alert('In dieser Zip-Datei fehlt die Datei zeitstrahl.json.'); return; }
-    if (src.canWrite && confirm(`In «${src.name}» gibt es noch keinen Zeitstrahl. Neuen anlegen?`)){
-      data = newData(src.name); await src.write('zeitstrahl.json', JSON.stringify(data, null, 2));
-    } else { if (!src.canWrite) alert(`In «${src.name}» wurde keine Datei zeitstrahl.json gefunden.`); return; }
+    if (src.canWrite){
+      data = await openSetup(src.name, `In «${src.name}» gibt es noch nichts. Neu anlegen:`); if (!data) return;
+      await src.write('zeitstrahl.json', JSON.stringify(data, null, 2));
+    } else { alert(`In «${src.name}» wurde keine Datei zeitstrahl.json gefunden.`); return; }
   }
   setData(src, data);
 }
 function recomputeSpan(){
+  if (S.st){ S.t0 = 0; S.tmax = S.st.n; updateMetrics(); return; }
   /* Spanne der massstäblichen Achse (ab Jahr 1); die v.-Chr.-Stationen liegen davor und zählen hier nicht */
   const today = Date.now() / 864e5, ad = [];
   for (const e of S.events){ if (!isBc(e.pos)) ad.push(e.pos); if (e.b && !isBc(e.b.day)) ad.push(e.b.day); }
@@ -642,20 +753,19 @@ function recomputeSpan(){
   updateMetrics();
 }
 function setData(src, data){
-  assetCache.clear(); thumbCache.clear();
+  assetCache.clear(); thumbCache.clear(); iconCache.clear(); iconDone.clear();
   S.src = src; S.data = data; S.hidden.clear(); S.sel = null; S.det = null; S.bakDone = false; S.story = null; S.search = null; S.noteCache = null; $('#searchbar').hidden = true; $('#q').value = '';
   data.kategorien = data.kategorien || []; data.events = data.events || []; data.stories = data.stories || [];
   data.events.forEach(e => { if (!e.id) e.id = uniqueId(slug(e.titel)); });
   try { S.view = localStorage.getItem('zeitstrahl-view:' + src.name) === 'bahnen' ? 'bahnen' : 'achse'; } catch { S.view = 'achse'; }
-  const p = prepare(data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; reindex();
+  const p = prepare(data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; S.st = p.st || null; reindex();
   if (p.bad) console.warn(p.bad + ' Ereignis(se) mit ungültigem Datum oder ohne Titel ignoriert');
-  $('#ttl').textContent = data.titel || src.name; document.title = (data.titel || src.name) + ' – Zeitstrahl';
-  $('#welcome').hidden = true; $('#viewtools').hidden = false; $('#admin').hidden = false;
+  $('#ttl').textContent = data.titel || src.name; document.title = winTitle(data.titel || src.name);
+  document.body.classList.remove('start'); $('#welcome').hidden = true; $('#viewtools').hidden = false; $('#admin').hidden = false;
   { const fm = !!src.fileMode;                                   // Datei-Modus: Sichern-Knopf und Status sichtbar
     S.dirty = false; S.zipReady = null; S.savedAt = null; S.zipVer++;
     document.body.classList.toggle('filemode', fm);
     $('#btnSave').hidden = $('#fileStatus').hidden = $('#mSave').hidden = !fm;
-    $('#mFolder').textContent = fm ? 'Anderen Zeitstrahl öffnen …' : 'Anderen Ordner öffnen …';
     updateFileStatus(); }
   $('#btnEdit').disabled = !src.canWrite;
   $('#btnEdit').title = src.canWrite ? '' : 'Dieser Ordner ist nur lesbar (Firefox/Safari). Zum Bearbeiten Chrome oder Edge verwenden.';
@@ -663,9 +773,10 @@ function setData(src, data){
   recomputeSpan();
   S.ppd = isLongSpan() ? overviewPpd() : initialPpd();
   $('#empty').hidden = S.events.length > 0;
+  $('#btnAdd').textContent = V('+ Ereignis'); $('#empty').textContent = V('Noch keine Ereignisse. Auf «Bearbeiten» klicken, dann «+ Ereignis» oder Doppelklick auf den Zeitstrahl.');
   checkVersion(data);
   buildLegend(); syncViewButtons(); syncStorySelect(); syncZoomLabel(); layout(); caption(null);
-  const vp = $('#viewport'); vp.scrollLeft = Math.max(endScrollLeft(), dayToX(S.t0) - vpW() * .04); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts (kurze Zeitstrahlen: ganze Achse)
+  const vp = $('#viewport'); vp.scrollLeft = S.st ? Math.max(0, dayToX(0) - vpW() * .08) : Math.max(endScrollLeft(), dayToX(S.t0) - vpW() * .04); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts (kurze Zeitstrahlen: ganze Achse)
   renderTicks();
 }
 function buildLegend(){
@@ -679,9 +790,9 @@ function buildLegend(){
 /* Nach Änderungen an den Daten: neu aufbauen, Ansicht möglichst beibehalten */
 function refresh(){
   const vp = $('#viewport'), midDay = xToDay(vp.scrollLeft + vp.clientWidth / 2), top = vp.scrollTop, selId = S.sel && S.sel.id;
-  const p = prepare(S.data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; reindex();
+  const p = prepare(S.data); S.cats = p.cats; S.events = p.evs; S.bcYears = p.bcYears; S.st = p.st || null; reindex();
   S.noteCache = null;
-  S.data.events.sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
+  if (!S.st) S.data.events.sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
   recomputeSpan(); S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd));
   S.sel = S.events.find(e => e.id === selId) || null;
   $('#empty').hidden = S.events.length > 0;
@@ -709,7 +820,7 @@ function saveData(){
       else setStatus(S.src.demo ? 'Beispiel: nur im Speicher' : '✓ Gespeichert');
     } catch (err){
       setStatus('FEHLER beim Speichern', true);
-      alert('Speichern fehlgeschlagen:\n' + err.message + '\n\nDeine Änderungen sind noch im Fenster. Nicht schliessen, Berechtigung prüfen (Menü → Anderen Ordner öffnen → erneut erlauben).');
+      alert('Speichern fehlgeschlagen:\n' + err.message + '\n\nDeine Änderungen sind noch im Fenster. Nicht schliessen, Berechtigung prüfen (Menü → Zurück zur Startseite → «Zuletzt … fortsetzen» und erneut erlauben).');
     }
   });
   return saveChain;
@@ -720,16 +831,26 @@ function saveData(){
    jedes v.-Chr.-Jahr mit Ereignissen ist eine feste Station (gleichmässig verteilt) links davon, mit Bruchmarke «//» dazwischen. */
 const BC0 = -2e9, BCU = 1e4;
 const isBc = v => v < -1e9;
-const dayToX = v => isBc(v) ? S.pad + ((v - BC0) / BCU + .5) * S.bcSlot : (v - S.t0) * S.ppd + S.pad + S.bcW;
-const xToDay = x => S.bcW > 0 && x < S.pad + S.bcW ? BC0 + ((x - S.pad) / S.bcSlot - .5) * BCU : (x - S.pad - S.bcW) / S.ppd + S.t0;
+/* Stationen: Einheiten (Breite 1 = eine Standardstation) ↔ Position */
+function stU(v){ const s = S.st; if (v < 0) return v * s.w[0]; if (v >= s.n) return s.tot + (v - s.n) * s.w[s.n - 1]; const i = Math.floor(v); return s.cum[i] + (v - i) * s.w[i]; }
+function stV(u){ const s = S.st; if (u < 0) return u / s.w[0]; if (u >= s.tot) return s.n + (u - s.tot) / s.w[s.n - 1];
+  let lo = 0, hi = s.n - 1; while (lo < hi){ const m = (lo + hi + 1) >> 1; if (s.cum[m] <= u) lo = m; else hi = m - 1; } return lo + (u - s.cum[lo]) / s.w[lo]; }
+const dayToX = v => S.st ? S.pad + stU(v) * S.ppd : isBc(v) ? S.pad + ((v - BC0) / BCU + .5) * S.bcSlot : (v - S.t0) * S.ppd + S.pad + S.bcW;
+const xToDay = x => S.st ? stV((x - S.pad) / S.ppd) : S.bcW > 0 && x < S.pad + S.bcW ? BC0 + ((x - S.pad) / S.bcSlot - .5) * BCU : (x - S.pad - S.bcW) / S.ppd + S.t0;
 function dims(){
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  const bahn = S.view === 'bahnen', gross = !!(S.data && S.data.kartengroesse === 'gross');
-  const fw = gross ? 1.3 : 1, fh = gross ? 1.25 : 1;
-  return { rem, bahn, gross, CW:(bahn ? 13 : 15) * fw * rem, CH:(bahn ? 5 : 6.6) * fh * rem, GAP:(bahn ? .5 : .7) * rem, BAND:3.6 * rem, PADV:rem, GX:.6 * rem };
+  const bahn = S.view === 'bahnen', gross = !!(S.data && S.data.kartengroesse === 'gross'), klein = !!(S.data && S.data.kartengroesse === 'klein');
+  const fw = gross ? 1.3 : klein ? .72 : 1, fh = gross ? 1.25 : klein ? .58 : 1;
+  return { rem, bahn, gross, klein, CW:(bahn ? 13 : 15) * fw * rem, CH:(bahn ? 5 : 6.6) * fh * rem, GAP:(bahn ? .5 : .7) * rem, BAND:3.6 * rem, PADV:rem, GX:.6 * rem };
 }
 function updateMetrics(){
   const D = dims(), n = S.bcYears.length;
+  if (S.st){                                                       // Stationen: eine Standardstation ist etwas breiter als eine Karte
+    const slot = D.CW * 1.08; S.bcSlot = slot; S.bcW = 0;
+    S.minPpd = Math.max(vpW() * .8, vpW() * .25) / S.st.tot; S.maxPpd = Math.max(S.minPpd, slot * S.st.abstand * 3);
+    S.ppd = Math.min(S.maxPpd, Math.max(S.minPpd, S.ppd)); return;
+  }
+  S.maxPpd = 90;
   S.bcSlot = Math.max(D.CW * .62, 8 * D.rem);
   S.bcW = n ? n * S.bcSlot + 2.6 * D.rem : 0;
   const avail = Math.max(vpW() * .8 - S.bcW, vpW() * .25);
@@ -749,24 +870,64 @@ function makeCard(e, col, left, top, dim, CW, CH){
   c.style.left = left + 'px'; c.style.top = top + 'px'; c.style.width = CW + 'px'; c.style.height = CH + 'px';
   const real = hasImg(e) && !e.thumbFail;
   c.innerHTML = (real ? '<img alt="" draggable="false">' : e.bild === 'keins' ? '' : tileHtml(e.a, col)) +
-    `<div class="tx"><div class="d">${fmtEventHtml(e)}</div><div class="t">${esc(e.titel)}</div></div>`;
+    `<div class="tx"><div class="d">${e.a.st && !e.b ? '' : fmtEventHtml(e)}</div><div class="t">${esc(e.titel)}</div></div>`;
   c.onclick = () => { select(e, false); S.editing ? openEditor(e) : openDetail(e); };
   c.onmouseenter = ev => showTip(e, ev); c.onmousemove = moveTip; c.onmouseleave = hideTip;
-  e.el = c; if (real) ensureThumb(e);
+  e.el = c; if (real){ if (cropArg(e)){ const im = c.querySelector('img'); if (im) im.style.objectPosition = `${cropArg(e).x}% ${cropArg(e).y}%`; } ensureThumb(e); }
   return c;
+}
+/* ----- Balken (Kategorien mit Darstellung «Balken») ----- */
+const isBar = e => !!(S.cats[e.kat] && S.cats[e.kat].darstellung === 'balken');
+function barGeom(e){
+  if (S.st){ const i = e.a.ya, j = e.b ? e.b.ya : i; return { l: S.pad + S.st.cum[i] * S.ppd + 2, r: S.pad + S.st.cum[j + 1] * S.ppd - 2 }; }
+  const l = e.x, r = e.b ? dayToX(e.b.day) : e.x; return { l, r: Math.max(r, l + 8) };
+}
+const barDates = e => S.st ? '' : fmtEvent(e).replace(' – ', '–');
+const hasIcon = e => e.bild !== 'keins';
+const barLabelLen = e => String(e.titel).length + (barDates(e) ? barDates(e).length + 1 : 0);
+/* Balken in Zeilen packen (nach Anfang sortiert); Ergebnis: Zahl der Zeilen. Reicht der Balken nicht für den Namen, steht der Name rechts daneben und braucht dort Platz. */
+function packBars(list, rem){
+  const ends = [], gap = .4 * rem;
+  list.forEach(e => { e._g = barGeom(e); e._in = e._g.r - e._g.l >= Math.min(30, barLabelLen(e) * .5 + 1.6 + (hasIcon(e) ? 1.4 : 0)) * rem; });
+  list.sort((a, b) => a._g.l - b._g.l);
+  for (const e of list){
+    const ext = e._in ? e._g.r : e._g.r + gap + Math.min(30, barLabelLen(e) * .5 + .8) * rem; let k = 0;
+    while ((ends[k] ?? -1e9) > e._g.l - gap - .9 * rem) k++;
+    ends[k] = ext; e.row = k; e._r = ext; e.x = e._g.l;
+  }
+  return ends.length;
+}
+function makeBar(e, col, top, dim, BH){
+  const g = e._g, b = el('div', 'pbar' + nc(col) + (S.sel === e ? ' sel' : '') + (dim ? ' dim' : '') + (e._in ? '' : ' out') + (hasIcon(e) ? ' ic' : ''));
+  b.style.setProperty('--c', col); b.style.left = g.l + 'px'; b.style.top = top + 'px'; b.style.width = Math.max(6, g.r - g.l) + 'px'; b.style.height = BH + 'px';
+  const dt = barDates(e), ini = () => `<i class="pi ini">${esc(initials(e.titel))}</i>`;
+  const img = hasIcon(e) && hasImg(e) && !e.thumbFail;
+  b.innerHTML = (hasIcon(e) ? (img ? '<img class="pi" alt="" draggable="false">' : ini()) : '') + `<span>${esc(e.titel)}${dt ? `<small>${esc(dt)}</small>` : ''}</span>`;
+  e._ip = null;
+  if (img){
+    const im = b.querySelector('img'), key = iconKey(e), done = iconDone.get(key);
+    if (done) im.src = done;
+    else e._ip = getIcon(e.bild, cropArg(e), key).then(u => { im.src = u; }, () => { const t = el('div'); t.innerHTML = ini(); im.replaceWith(t.firstChild); });
+  }
+  b.onclick = () => { select(e, false); S.editing ? openEditor(e) : openDetail(e); };
+  b.onmouseenter = ev => showTip(e, ev); b.onmousemove = moveTip; b.onmouseleave = hideTip;
+  e.el = b; e.threadX = g.l + Math.min(12, (g.r - g.l) / 2); e.threadY = top + BH / 2;
+  return b;
 }
 function layout(){
   if (!S.data) return;
   const vp = $('#viewport'), st = $('#stage');
-  const { rem, bahn, gross, CW, CH, GAP, BAND, PADV, GX } = dims();
+  const { rem, bahn, gross, klein, CW, CH, GAP, BAND, PADV, GX } = dims();
   updateMetrics();
+  const L0 = S.st ? CW / 2 : 2.5, ox = S.st ? CW / 2 : 0;          // Stationen: Karte mittig auf der Position; Zeitstrahl: Zeitpunkt am linken Kartenrand
   S.pad = S.printW ? Math.round(2.5 * rem) : Math.round(vpW() * .35);
   /* Im Story-Modus zählt die Kategorie-Filterung nicht — die Story darf über alle Kategorien gehen */
   const vis = S.vis = S.events.filter(e => S.story || S.search || !S.hidden.has(e.kat));
-  const W = Math.ceil((S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
-  st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
+  const W = Math.ceil((S.st ? S.st.tot : S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
+  st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : klein ? 'klein' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
   const frag = document.createDocumentFragment(); let H;
-  vis.forEach(e => e.x = dayToX(e.pos));
+  vis.forEach(e => { e.x = dayToX(e.pos); e._r = null; });
+  const BH = 2 * rem, BG = .35 * rem, cardEvs = vis.filter(e => !isBar(e)), barEvs = vis.filter(isBar);
   const vh = S.printW ? 0 : vp.clientHeight;
   /* Achsenbalken; mit Lücke zwischen dem v.-Chr.-Block und der Achse ab Jahr 1 */
   const addBars = (parent, top) => {
@@ -777,18 +938,20 @@ function layout(){
   if (!bahn){
     /* eine Achse, Karten abwechselnd oben/unten */
     const lastEnd = []; let maxUp = 0, maxDown = 0;
-    for (const e of vis){
-      let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - GX) k++;
-      lastEnd[k] = e.x + CW; e.lane = k;
+    for (const e of cardEvs){
+      let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - ox - GX) k++;
+      lastEnd[k] = e.x - ox + CW; e.lane = k;
       const lvl = k >> 1; if (k % 2 === 0) maxUp = Math.max(maxUp, lvl + 1); else maxDown = Math.max(maxDown, lvl + 1);
     }
     const upH = maxUp * (CH + GAP), downH = maxDown * (CH + GAP);
     const axisTop = Math.max(vh / 2 - BAND / 2, upH + PADV);
-    H = Math.max(vh, axisTop + BAND + downH + PADV);
+    const nRows = barEvs.length ? packBars(barEvs, rem) : 0, zoneTop = axisTop + BAND + downH + (nRows ? 1.2 * rem : 0);
+    H = Math.max(vh, zoneTop + nRows * (BH + BG) + PADV);
     addBars(frag, axisTop + .5 * rem);
     const ticks = el('div', 'ticks'); ticks.style.top = axisTop + 'px'; ticks.style.height = BAND + 'px'; frag.append(ticks); S.ticksEl = ticks;
     const dotY = axisTop + .5 * rem + 2; S.axisY = dotY;
-    for (const e of vis){
+    for (const e of barEvs) frag.append(makeBar(e, colOf(e), zoneTop + e.row * (BH + BG), isDim(e), BH));
+    for (const e of cardEvs){
       const up = e.lane % 2 === 0, lvl = e.lane >> 1, col = colOf(e);
       const dim = isDim(e);
       const top = up ? axisTop - (lvl + 1) * (CH + GAP) : axisTop + BAND + lvl * (CH + GAP);
@@ -800,22 +963,23 @@ function layout(){
         sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (dotY - 5) + 'px'; frag.append(sp); }
       const dot = el('div', 'dot' + nc(col) + (dim ? ' dim' : '')); dot.style.setProperty('--c', col); dot.style.left = (e.x - 6) + 'px'; dot.style.top = (dotY - 6) + 'px'; frag.append(dot);
       e.threadX = e.x; e.threadY = dotY;
-      frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
+      frag.append(makeCard(e, col, e.x - L0, top, dim, CW, CH));
     }
   } else {
     /* Bahnen: eine Zeile pro Kategorie */
     S.axisY = null;
-    const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => ({ c, evs: [], levels: 0 }));
+    const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => ({ c, evs: [], levels: 0, bar: c.darstellung === 'balken' }));
     if (vis.some(e => !e.kat)) groups.push({ c:{ id:null, name:'Ohne Kategorie', farbe:NOCAT }, evs: [], levels: 0 });
     for (const e of vis){ const g = groups.find(g => g.c.id === (e.kat || null)); if (g) g.evs.push(e); }
     for (const g of groups){
       const lastEnd = [];
+      if (g.bar){ g.levels = g.evs.length ? packBars(g.evs, rem) : 0; continue; }
       for (const e of g.evs){
-        let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - GX) k++;
-        lastEnd[k] = Math.max(e.x + CW, e.b ? dayToX(e.b.day) : 0); e.lvl = k; g.levels = Math.max(g.levels, k + 1);
+        let k = 0; while ((lastEnd[k] ?? -1e9) > e.x - ox - GX) k++;
+        lastEnd[k] = Math.max(e.x - ox + CW, e.b ? dayToX(e.b.day) : 0); e.lvl = k; g.levels = Math.max(g.levels, k + 1);
       }
     }
-    const rowH = g => (g.levels || .55) * (CH + GAP) + GAP;
+    const rowH = g => g.bar ? (g.levels || .55) * (BH + BG) + GAP : (g.levels || .55) * (CH + GAP) + GAP;
     const sum = groups.reduce((a, g) => a + rowH(g), 0);
     const extra = groups.length ? Math.max(0, (vh - BAND - sum) / groups.length) : 0;
     H = BAND + sum + extra * groups.length;
@@ -832,13 +996,14 @@ function layout(){
       ln.style.background = `color-mix(in srgb, ${col} ${i % 2 ? 4 : 9}%, transparent)`; frag.append(ln);
       const lab = el('div', 'lane-label' + nc(col)); lab.style.setProperty('--c', col); lab.style.top = (y - BAND + 6) + 'px'; lab.textContent = g.c.name; lw.append(lab);
       S.lanes.push({ id:g.c.id, y, h });
+      if (g.bar){ for (const e of g.evs) frag.append(makeBar(e, col, y + extra / 2 + GAP + e.row * (BH + BG), isDim(e), BH)); y += h; i++; continue; }
       for (const e of g.evs){
         const dim = isDim(e);
         const top = y + extra / 2 + GAP + e.lvl * (CH + GAP);
         if (e.b){ const sp = el('div', 'span' + nc(col) + (dim ? ' dim' : '')); sp.style.setProperty('--c', col); sp.style.left = e.x + 'px';
           sp.style.width = Math.max(6, dayToX(e.b.day) - e.x) + 'px'; sp.style.top = (top + CH + 2) + 'px'; sp.style.zIndex = 2; frag.append(sp); }
-        e.threadX = e.x + CW / 2 - 2.5; e.threadY = top + CH / 2;
-        frag.append(makeCard(e, col, e.x - 2.5, top, dim, CW, CH));
+        e.threadX = e.x + CW / 2 - L0; e.threadY = top + CH / 2;
+        frag.append(makeCard(e, col, e.x - L0, top, dim, CW, CH));
       }
       y += h; i++;
     }
@@ -855,7 +1020,7 @@ function layout(){
       frag.append(thread);
     }
   }
-  S.contentRight = vis.reduce((m, e) => Math.max(m, e.x - 2.5 + CW, e.b ? dayToX(e.b.day) : 0), 0);
+  S.contentRight = vis.reduce((m, e) => Math.max(m, e._r != null ? e._r : e.x - L0 + CW, e.b ? dayToX(e.b.day) : 0), 0);
   st.style.width = W + 'px'; st.style.height = Math.max(H, vh) + 'px';
   st.append(frag);
   /* Titel kürzen, sodass die letzte sichtbare Zeile mit «…» endet statt mitten in der Zeile abgeschnitten zu werden
@@ -874,6 +1039,17 @@ function layout(){
 }
 function renderTicks(){
   if (!S.ticksEl) return;
+  if (S.st){                                                       // Stationen: Trennlinie und Beschriftung am Anfang jeder Station
+    const s = S.st; let h = '', g = '';
+    s.list.forEach((t, i) => {
+      const x = S.pad + s.cum[i] * S.ppd, wpx = s.w[i] * S.ppd;
+      const txt = wpx >= 76 ? t.label : stNum(t.label, i);                    // zu schmal: nur die Nummer
+      h += `<i class="ln maj" style="left:${x}px"></i><b class="lb r2" title="${esc(t.label)}" style="left:${x + 4}px;max-width:${Math.max(24, wpx - 10)}px;overflow:hidden;text-overflow:ellipsis">${esc(txt)}</b>`;
+      if (S.gridEl) g += `<i class="gl" style="left:${x}px"></i>`;
+    });
+    const xe = S.pad + s.tot * S.ppd; h += `<i class="ln maj" style="left:${xe}px"></i>`; if (S.gridEl) g += `<i class="gl" style="left:${xe}px"></i>`;
+    S.ticksEl.innerHTML = h; if (S.gridEl) S.gridEl.innerHTML = g; return;
+  }
   const vp = $('#viewport'), ppd = S.ppd;
   /* Nie weiter beschriften als der Balken selbst reicht (Datenrand + Polster) — sonst kann man ins Leere scrollen */
   const dayMin = S.bcW > 0 ? S.t0 : S.t0 - S.pad / ppd, dayMax = S.tmax + S.pad / ppd;
@@ -927,11 +1103,11 @@ function setZoom(n, ax){
    Bei Zeitstrahlen, die kürzer sind: wirklich alles. */
 const OVERVIEW_YEARS = 100;
 const overviewWin = () => OVERVIEW_YEARS * 365.25;
-const isLongSpan = () => S.tmax - S.t0 > overviewWin() * 1.2;
+const isLongSpan = () => !S.st && S.tmax - S.t0 > overviewWin() * 1.2;
 const overviewPpd = () => Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / overviewWin()));
 /* Die Achse und die Startansicht zeigen immer mindestens so viele Jahre — sonst sieht ein neuer Zeitstrahl mit einem Ereignis nur einzelne Tage */
 const MIN_VIEW_YEARS = 5;
-const initialPpd = () => Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / (MIN_VIEW_YEARS * 365.25)));
+const initialPpd = () => S.st ? Math.min(S.maxPpd, Math.max(S.minPpd, dims().CW * 1.08 * S.st.abstand)) : Math.min(S.maxPpd, Math.max(S.minPpd, vpW() * .92 / (MIN_VIEW_YEARS * 365.25)));
 /* Scrollposition, bei der das Ende des Zeitstrahls (neuestes Ereignis samt Karte) ganz rechts sichtbar ist */
 const endScrollLeft = () => Math.max(0, S.contentRight + 2 * (S.geo ? S.geo.rem : 16) - $('#viewport').clientWidth);
 function overview(){
@@ -970,14 +1146,14 @@ function metaText(){
   const n = S.events.length; if (!S.data || !n) return '';
   let lo = S.events[0].a, hi = S.events[0].b || S.events[0].a;
   for (const e of S.events){ if (e.a.ya < lo.ya) lo = e.a; const end = e.b || e.a; if (end.ya > hi.ya) hi = end; }
-  const yl = p => p.bc ? `${p.y} v. Chr.` : String(p.y);
+  const yl = p => p.st ? p.label : p.bc ? `${p.y} v. Chr.` : String(p.y);
   const span = lo.ya === hi.ya ? yl(lo) : `${yl(lo)} – ${yl(hi)}`;
-  const cnt = S.vis.length !== n ? `${S.vis.length} von ${n} Ereignissen` : `${n} Ereignis${n === 1 ? '' : 'se'}`;
+  const cnt = S.vis.length !== n ? `${S.vis.length} von ${n} ${S.st ? 'Einträgen' : 'Ereignissen'}` : `${n} ${S.st ? (n === 1 ? 'Eintrag' : 'Einträge') : (n === 1 ? 'Ereignis' : 'Ereignisse')}`;
   return `<span class="meta">Umfang: ${esc(span)} · ${cnt}</span>`;
 }
 function caption(e){
   const f = $('#caption'), meta = metaText();
-  if (!e){ f.className = 'hint'; f.innerHTML = `<span>${esc(S.editing ? HINT_EDIT : hint())}</span>${meta}`; return; }
+  if (!e){ f.className = 'hint'; f.innerHTML = `<span>${esc(S.editing ? V(HINT_EDIT) : hint())}</span>${meta}`; return; }
   const col = colOf(e);
   const storyTag = S.story && S.story.set.has(e.id)
     ? `<em style="color:var(--danger)">Story «${esc(S.story.name)}» ${S.story.ids.indexOf(e.id) + 1}/${S.story.ids.length}</em>` : '';
@@ -1034,7 +1210,7 @@ function imgExt(f){
   const m = /\.(jpe?g|png|webp|gif|svg|avif)$/.exec(n); if (m) return m[1] === 'jpeg' ? 'jpg' : m[1];
   alert('Das ist keine unterstützte Bilddatei.'); return null;
 }
-/* Im Datei-Modus (iPad) Bilder beim Hinzufügen verkleinern: kleinere Dateien, weniger Speicher */
+/* Bilder beim Hinzufügen verkleinern (auf höchstens 2000 px, JPEG): kleinere Dateien, weniger Speicher, schnelleres Backup */
 async function shrinkImage(file, max = 2000){
   if (!/^image\/(jpeg|png|webp)$/.test(file.type) || typeof createImageBitmap !== 'function') return file;
   try {
@@ -1049,7 +1225,8 @@ async function shrinkImage(file, max = 2000){
   } catch { return file; }
 }
 async function stageImage(file){
-  if (S.src && S.src.fileMode) file = await shrinkImage(file);
+  file = await shrinkImage(file);
+  if (file.size > 12e6){ alert(`Das Bild ist sehr gross (${(file.size / 1048576).toFixed(0)} MB) und liess sich nicht verkleinern. Bitte vorher in der Grösse reduzieren (z.B. mit «Vorschau» am Mac) oder ein kleineres Bild nehmen.`); return null; }
   const ext = imgExt(file); if (!ext) return null;
   let base = slug((file.name || '').replace(/\.[^.]+$/, ''));
   if (!base || /^(image|bild|screenshot|unbenannt)$/.test(base)) base = 'bild-' + Date.now().toString(36);
@@ -1070,6 +1247,7 @@ async function filesFromDT(dt){
 function insertAtCursor(ta, text){ ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); ta.dispatchEvent(new Event('input')); }
 /* Vorschau des Standardbilds aus den aktuellen Formularwerten */
 function edTile(){
+  if (S.st){ const i = S.st.idx.get($('#f-st').value), k = S.cats[$('#f-kat').value]; return tileHtml(i == null ? null : { y:stNum(S.st.list[i].label, i), bc:false }, k ? k.farbe : NOCAT); }
   const iso = normDateInput($('#f-datum').value, $('#f-bc').checked), kat = S.cats[$('#f-kat').value];
   return tileHtml(iso ? parseDate(iso) : null, kat ? kat.farbe : NOCAT);
 }
@@ -1080,22 +1258,52 @@ async function showEdImage(){
   if (p === 'keins'){ box.textContent = 'Kein Bild'; return; }
   if (!p){ box.innerHTML = edTile(); return; }
   const img = el('img'); box.append(img);
-  try { img.src = ED.pending.has(p) ? URL.createObjectURL(ED.pending.get(p)) : await assetUrl(p); }
-  catch { img.remove(); box.textContent = `Bild «${p}» nicht gefunden.`; }
+  try { const u = ED.pending.has(p) ? URL.createObjectURL(ED.pending.get(p)) : await assetUrl(p); img.src = u; showCrop(u, p); }
+  catch { img.remove(); box.textContent = `Bild «${p}» nicht gefunden.`; showCrop(null); }
+}
+/* Ausschnitt im Editor: Bild im Kreis ziehen, Zoom-Regler; gespeichert wird nur die Position (bildAusschnitt), das Bild bleibt unverändert */
+let CROP = null;
+function paintCrop(){
+  if (!CROP) return; const D = $('#f-cropv').clientWidth || 128, r = cropOf(CROP.w, CROP.h, CROP.a), k = D / r.side;
+  Object.assign(CROP.img.style, { width:CROP.w * k + 'px', height:CROP.h * k + 'px', left:-r.sx * k + 'px', top:-r.sy * k + 'px' }); CROP.k = k; CROP.r = r;
+}
+function setCrop(a){ CROP.a = { x:+a.x.toFixed(1), y:+a.y.toFixed(1), z:+a.z.toFixed(2) }; ED.raw.bildAusschnitt = CROP.a; ED.dirty = true; paintCrop(); }
+async function showCrop(url, path){
+  const box = $('#f-crop'); if (!url){ box.hidden = true; CROP = null; if (!ED.raw.bild || ED.raw.bild === 'keins') delete ED.raw.bildAusschnitt; return; }
+  if (CROP && CROP.path !== path) delete ED.raw.bildAusschnitt;                // anderes Bild: Ausschnitt zurücksetzen
+  const im = new Image(); im.src = url; try { await im.decode(); } catch { box.hidden = true; return; }
+  const a = ED.raw.bildAusschnitt, v = $('#f-cropv'); v.textContent = ''; const img = el('img'); img.src = url; img.draggable = false; v.append(img);
+  CROP = { path, w:im.naturalWidth, h:im.naturalHeight, img, a: a && isFinite(a.x) && isFinite(a.y) ? { x:a.x, y:a.y, z:a.z || 1 } : null };
+  box.hidden = false; $('#f-cropz').value = CROP.a ? CROP.a.z : 1; paintCrop();
+}
+function initCropUi(){
+  const v = $('#f-cropv'); let drag = null;
+  v.onpointerdown = ev => { if (!CROP) return; ev.preventDefault(); if (v.setPointerCapture) v.setPointerCapture(ev.pointerId); drag = { x:ev.clientX, y:ev.clientY, r:{ ...CROP.r }, z:CROP.a ? CROP.a.z : 1 }; };
+  v.onpointermove = ev => { if (!drag || !CROP) return;
+    const side = drag.r.side, sx = drag.r.sx - (ev.clientX - drag.x) / CROP.k, sy = drag.r.sy - (ev.clientY - drag.y) / CROP.k;
+    const cx = Math.max(side / 2, Math.min(CROP.w - side / 2, sx + side / 2)), cy = Math.max(side / 2, Math.min(CROP.h - side / 2, sy + side / 2));
+    setCrop({ x:cx / CROP.w * 100, y:cy / CROP.h * 100, z:drag.z }); };
+  v.onpointerup = v.onpointercancel = () => { drag = null; };
+  $('#f-cropz').oninput = () => { if (!CROP) return; const r = CROP.r, z = parseFloat($('#f-cropz').value) || 1;
+    setCrop({ x:(r.sx + r.side / 2) / CROP.w * 100, y:(r.sy + r.side / 2) / CROP.h * 100, z }); };
+  $('#f-cropreset').onclick = () => { if (!CROP) return; delete ED.raw.bildAusschnitt; CROP.a = null; $('#f-cropz').value = 1; ED.dirty = true; paintCrop(); };
 }
 async function openEditor(ev, pre = {}){
   if (!S.editing) return;
-  hideTip(); closeDetail();
+  hideTip(); closeDetail(); CROP = null;
   const isNew = !ev;
-  const raw = isNew ? { id:'', titel:'', datum:pre.datum || '', kategorie:pre.kategorie || '', beschreibung:'' }
+  const raw = isNew ? { id:'', titel:'', datum:pre.datum || '', ...(S.st ? { station:pre.station || S.st.list[0].id } : {}), kategorie:pre.kategorie || '', beschreibung:'' }
                     : JSON.parse(JSON.stringify(S.data.events.find(x => x.id === ev.id)));
   Object.assign(ED, { open:true, isNew, raw, pending:new Map(), dirty:false, noteOrig:'' });
   const cats = S.data.kategorien;
   const sh = $('#edsheet');
+  const stOpts = S.st ? S.st.list.map(t => `<option value="${esc(t.id)}">${esc(t.label)}</option>`).join('') : '', unit = esc((S.data.achse && S.data.achse.einheit) || 'Station');
+  const stRow = `<div class="row"><div><label>${unit}</label><select id="f-st">${stOpts}</select></div>
+      <div><label>Bis (optional, macht einen Bereich)</label><select id="f-st2"><option value="">(nur dieses ${unit})</option>${stOpts}</select></div></div>`;
   sh.innerHTML = `<button class="sheet-x" id="f-x" aria-label="Schliessen">✕</button>
-    <h2>${isNew ? 'Neues Ereignis' : 'Ereignis bearbeiten'}</h2>
+    <h2>${S.st ? (isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten') : (isNew ? 'Neues Ereignis' : 'Ereignis bearbeiten')}</h2>
     <label>Titel</label><input type="text" id="f-titel" autocomplete="off" enterkeyhint="done">
-    <div class="row">
+    ${S.st ? stRow : `    <div class="row">
       <div><label>Datum (z.B. 7.10.2023 · 10.2023 · 476 · bei v. Chr. nur das Jahr)</label><input type="text" id="f-datum" autocomplete="off" enterkeyhint="done">
         <label class="chk"><input type="checkbox" id="f-bc">v. Chr.</label>
         <div class="hintline" id="h-datum"></div></div>
@@ -1103,13 +1311,18 @@ async function openEditor(ev, pre = {}){
         <label class="chk"><input type="checkbox" id="f-ende-bc">v. Chr.</label>
         <label class="chk"><input type="checkbox" id="f-ongoing">Läuft noch (bis heute)</label>
         <div class="hintline" id="h-ende"></div></div>
-    </div>
+    </div>`}
     <label>Kategorie</label>
     <select id="f-kat"><option value="">(ohne Kategorie)</option>${cats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
     <label>Kurzbeschreibung (erscheint beim Darüberfahren)</label><textarea id="f-besch"></textarea>
     <label>Bild</label>
     <div class="drop" id="f-drop"><div id="f-img"></div><div>Bild hierher ziehen, mit Strg+V einfügen oder klicken</div></div>
     <div style="margin-top:.4rem;display:flex;gap:.4rem"><button class="mini" id="f-imgstd" hidden>Standardbild</button><button class="mini" id="f-imgnone">Kein Bild</button></div>
+    <div id="f-crop" hidden><label>Ausschnitt (Kreis am Balken, Kachel auf der Karte)</label>
+      <div class="cropwrap"><div id="f-cropv" class="cropv" title="Bild verschieben"></div>
+        <div><div class="hintline">Bild im Kreis ziehen, um den Ausschnitt zu verschieben.</div>
+          <label class="chk">Vergrössern <input type="range" id="f-cropz" min="1" max="4" step="0.1" value="1" style="width:9rem"></label>
+          <button class="mini" id="f-cropreset" type="button" style="margin-top:.3rem">Zurücksetzen</button></div></div></div>
     <input type="file" id="f-file" accept="image/*" hidden>
     <label>Quelle (Link oder Text)</label><input type="text" id="f-quelle" autocomplete="off" enterkeyhint="done">
     <label>Notiz (Markdown)</label>
@@ -1118,10 +1331,14 @@ async function openEditor(ev, pre = {}){
     <div id="f-prev" class="md" hidden></div>
     <div class="actions">${isNew ? '' : '<button class="btn danger" id="f-del">Löschen</button>'}<span class="sp"></span><span class="err" id="f-err"></span>
       <button class="btn" id="f-cancel">Abbrechen</button><button class="btn primary" id="f-save">Speichern</button></div>`;
-  $('#f-titel').value = raw.titel || ''; $('#f-datum').value = raw.datum ? toSwissInput(raw.datum) : '';
-  $('#f-bc').checked = !!pre.bc || (!!raw.datum && isBcDate(raw.datum));
-  $('#f-ende').value = raw.ende && raw.ende !== 'heute' ? toSwissInput(raw.ende) : '';
-  $('#f-ende-bc').checked = !!raw.ende && raw.ende !== 'heute' && isBcDate(raw.ende);
+  $('#f-titel').value = raw.titel || '';
+  if (S.st){ $('#f-st').value = raw.station || S.st.list[0].id; $('#f-st2').value = raw.stationEnde || ''; }
+  else {
+    $('#f-datum').value = raw.datum ? toSwissInput(raw.datum) : '';
+    $('#f-bc').checked = !!pre.bc || (!!raw.datum && isBcDate(raw.datum));
+    $('#f-ende').value = raw.ende && raw.ende !== 'heute' ? toSwissInput(raw.ende) : '';
+    $('#f-ende-bc').checked = !!raw.ende && raw.ende !== 'heute' && isBcDate(raw.ende);
+  }
   $('#f-kat').value = cats.some(c => c.id === raw.kategorie) ? raw.kategorie : '';
   $('#f-besch').value = raw.beschreibung || ''; $('#f-quelle').value = raw.quelle || '';
   const dirty = () => ED.dirty = true;
@@ -1133,15 +1350,21 @@ async function openEditor(ev, pre = {}){
     if (iso){ h.textContent = '→ ' + fmt(parseDate(iso)); h.className = 'hintline'; }
     else { h.textContent = $(bcBox).checked ? 'Vor Christus nur eine Jahreszahl (z.B. 200)' : 'Format nicht erkannt'; h.className = 'hintline bad'; }
   };
-  const hints = () => { dateHint('#f-datum', '#h-datum', '#f-bc'); dateHint('#f-ende', '#h-ende', '#f-ende-bc'); if (!ED.raw.bild) showEdImage(); };
-  ['#f-datum', '#f-ende'].forEach(i => $(i).oninput = hints);
-  ['#f-bc', '#f-ende-bc', '#f-kat'].forEach(i => $(i).onchange = hints);
+  const barLabels = () => {
+    const k = S.cats[$('#f-kat').value], bar = !!(k && k.darstellung === 'balken'), lab = (id, t) => { const l = $(id) && $(id).parentElement.querySelector('label'); if (l) l.textContent = t; };
+    if (S.st){ lab('#f-st', bar ? `Von ${(S.data.achse.einheit) || 'Station'} (Beginn des Balkens)` : ((S.data.achse.einheit) || 'Station')); lab('#f-st2', bar ? 'Bis (Ende des Balkens, leer = nur diese Station)' : 'Bis (optional, macht einen Bereich)'); }
+    else { lab('#f-datum', bar ? 'Beginn (bei Personen: Geburt; z.B. 1723 · bei v. Chr. nur das Jahr)' : 'Datum (z.B. 7.10.2023 · 10.2023 · 476 · bei v. Chr. nur das Jahr)'); lab('#f-ende', bar ? 'Ende (bei Personen: Tod; «Läuft noch» für Lebende)' : 'Ende (optional, macht einen Zeitraum)'); }
+  };
+  const hints = () => { barLabels(); if (!S.st){ dateHint('#f-datum', '#h-datum', '#f-bc'); dateHint('#f-ende', '#h-ende', '#f-ende-bc'); } if (!ED.raw.bild) showEdImage(); };
+  (S.st ? [] : ['#f-datum', '#f-ende']).forEach(i => $(i).oninput = hints);
+  (S.st ? ['#f-st', '#f-kat'] : ['#f-bc', '#f-ende-bc', '#f-kat']).forEach(i => $(i).onchange = hints);
   const syncOngoing = () => { const on = $('#f-ongoing').checked; $('#f-ende').disabled = $('#f-ende-bc').disabled = on; if (on){ $('#f-ende').value = ''; $('#h-ende').textContent = ''; $('#h-ende').className = 'hintline'; } };
-  $('#f-ongoing').checked = raw.ende === 'heute'; $('#f-ongoing').onchange = syncOngoing; syncOngoing();
+  if (!S.st){ $('#f-ongoing').checked = raw.ende === 'heute'; $('#f-ongoing').onchange = syncOngoing; syncOngoing(); }
   hints(); showEdImage();
   const drop = $('#f-drop');
   drop.onclick = () => $('#f-file').click();
   $('#f-file').onchange = async ev2 => { const f = ev2.target.files[0]; if (f){ const p = await stageImage(f); if (p){ ED.raw.bild = p; showEdImage(); } } ev2.target.value = ''; };
+  initCropUi();
   $('#f-imgstd').onclick = () => { ED.raw.bild = ''; ED.dirty = true; showEdImage(); };
   $('#f-imgnone').onclick = () => { ED.raw.bild = 'keins'; ED.dirty = true; showEdImage(); };
   drop.ondragover = ev2 => { ev2.preventDefault(); drop.classList.add('over'); };
@@ -1177,15 +1400,23 @@ $('#editor').addEventListener('keydown', ev => {
 async function saveEditor(){
   const err = m => { $('#f-err').textContent = m; return false; };
   const titel = $('#f-titel').value.trim(); if (!titel) return err('Titel fehlt.');
-  const d = normDateInput($('#f-datum').value, $('#f-bc').checked); if (!d) return err('Datum fehlt oder Format nicht erkannt.');
-  const ongoing = $('#f-ongoing').checked;
-  let ende = ongoing ? '' : $('#f-ende').value.trim();
-  if (ende){ ende = normDateInput(ende, $('#f-ende-bc').checked); if (!ende) return err('Ende: Format nicht erkannt.'); if (parseDate(ende, true).day < parseDate(d).day) return err('Ende liegt vor dem Beginn.'); }
-  const raw = ED.raw; raw.titel = titel; raw.datum = d; raw.ende = ongoing ? 'heute' : (ende || undefined);
+  const raw = ED.raw; let d = null, st1 = null;
+  if (S.st){
+    st1 = $('#f-st').value; const st2 = $('#f-st2').value; if (!st1) return err('Station fehlt.');
+    if (st2 && S.st.idx.get(st2) <= S.st.idx.get(st1)) return err('«Bis» muss nach dem Beginn liegen.');
+    raw.titel = titel; raw.station = st1; raw.stationEnde = st2 || undefined; delete raw.datum; delete raw.ende;
+  } else {
+    d = normDateInput($('#f-datum').value, $('#f-bc').checked); if (!d) return err('Datum fehlt oder Format nicht erkannt.');
+    const ongoing = $('#f-ongoing').checked;
+    let ende = ongoing ? '' : $('#f-ende').value.trim();
+    if (ende){ ende = normDateInput(ende, $('#f-ende-bc').checked); if (!ende) return err('Ende: Format nicht erkannt.'); if (parseDate(ende, true).day < parseDate(d).day) return err('Ende liegt vor dem Beginn.'); }
+    raw.titel = titel; raw.datum = d; raw.ende = ongoing ? 'heute' : (ende || undefined);
+  }
   raw.kategorie = $('#f-kat').value || undefined;
   raw.beschreibung = $('#f-besch').value.trim() || undefined; raw.quelle = $('#f-quelle').value.trim() || undefined;
   if (!raw.bild) delete raw.bild;
-  if (ED.isNew) raw.id = uniqueId(slug(titel) + '-' + yearTag(parseDate(d)));
+  if (!raw.bild || raw.bild === 'keins') delete raw.bildAusschnitt;
+  if (ED.isNew) raw.id = uniqueId(slug(titel) + '-' + (S.st ? S.st.idx.get(st1) + 1 : yearTag(parseDate(d))));
   $('#f-save').disabled = true;
   try {
     const note = $('#f-notiz').value;
@@ -1218,27 +1449,73 @@ function applyBg(){
 }
 
 /* ========== Einstellungen (Titel, Kategorien) ========== */
-const SET = { cats:[], titel:'', gross:false, bg:'warm', pal:-1 };
+const SET = { cats:[], titel:'', size:'normal', bg:'warm', pal:-1, sts:[], abst:'normal', bm:'gleich', am:4, multi:false, multiText:'' };
 function openSettings(){
   if (!S.data || !S.src.canWrite){ return; }
-  SET.pal = -1; SET.bg = BGCOL[S.data.hintergrund] ? S.data.hintergrund : 'warm'; SET.titel = S.data.titel || ''; SET.gross = S.data.kartengroesse === 'gross'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
+  SET.pal = -1; SET.multi = false; SET.multiText = ''; SET.bg = BGCOL[S.data.hintergrund] ? S.data.hintergrund : 'warm'; SET.titel = S.data.titel || ''; SET.size = ['klein', 'gross'].includes(S.data.kartengroesse) ? S.data.kartengroesse : 'normal'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
+  SET.sts = S.st ? S.data.achse.stationen.map(t => ({ ...t })) : []; SET.abst = S.st && ABSTAND[S.data.achse.abstand] ? S.data.achse.abstand : 'normal';
+  SET.bm = S.st && S.data.achse.breitenmodus === 'auto' ? 'auto' : 'gleich'; SET.am = S.st && [2, 4, 6, 8].includes(Number(S.data.achse.autoMax)) ? Number(S.data.achse.autoMax) : 4;
   renderSettings(); $('#settings').hidden = false;
 }
 function renderSettings(){
   const sh = $('#setsheet'), used = id => S.data.events.filter(e => e.kategorie === id).length;
-  sh.innerHTML = `<button class="sheet-x" id="s-x" aria-label="Schliessen">✕</button><h2>Zeitstrahl-Einstellungen</h2>
+  sh.innerHTML = `<button class="sheet-x" id="s-x" aria-label="Schliessen">✕</button><h2>${S.st ? 'Einstellungen' : 'Zeitstrahl-Einstellungen'}</h2>
     <label>Titel</label><input type="text" id="s-titel" enterkeyhint="done">
-    <label>Anzeigegrösse der Ereignisse</label>
-    <div class="seg" id="s-size" style="width:max-content"><button type="button" data-s="normal">Normal</button><button type="button" data-s="gross">Gross</button></div>
-    <div class="hintline">Gross = breitere und höhere Ereignisse mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.</div>
+    <label>${V('Anzeigegrösse der Ereignisse')}</label>
+    <div class="seg" id="s-size" style="width:max-content"><button type="button" data-s="klein">Klein</button><button type="button" data-s="normal">Normal</button><button type="button" data-s="gross">Gross</button></div>
+    <div class="hintline">${V('Klein = schmale Karten ohne Bild und Datum, es passen viel mehr auf einmal (bei Gedränge). Gross = breitere und höhere Ereignisse mit grösserer Schrift, sinnvoll bei langen Titeln oder am Beamer.')}</div>
     <label>Hintergrund (nur im hellen Modus)</label>
     <div class="seg" id="s-bg" style="width:max-content;max-width:100%;flex-wrap:wrap"></div>
+    ${S.st ? `<label>Abstand der Stationen</label>
+    <div class="seg" id="s-abst" style="width:max-content"><button type="button" data-a="eng">Eng</button><button type="button" data-a="normal">Normal</button><button type="button" data-a="weit">Weit</button></div>
+    <label>Breite der Stationen</label>
+    <div class="seg" id="s-bm" style="width:max-content"><button type="button" data-m="gleich">Gleichmässig</button><button type="button" data-m="auto">Je nach Einträgen</button></div>
+    ${SET.bm === 'auto' ? `<label>Auto bis höchstens</label><div class="seg" id="s-am" style="width:max-content"><button type="button" data-n="2">2×</button><button type="button" data-n="4">4×</button><button type="button" data-n="6">6×</button><button type="button" data-n="8">8×</button></div>` : ''}
+    <label>Stationen (Einheit «${esc((S.data.achse.einheit) || 'Station')}»; die Reihenfolge bestimmt die Achse)</label><div id="s-sts"></div>
+    <div style="margin-top:.6rem"><button class="btn" id="s-stadd">+ Station</button> <button class="btn" id="s-stmulti">+ Mehrere …</button></div>
+    ${SET.multi ? `<label>Neue Stationen (eine pro Zeile)</label><textarea id="s-stlines" placeholder="Lernphase 5&#10;Lernphase 6"></textarea><div style="margin-top:.4rem"><button class="btn primary" id="s-stlinesgo">Hinzufügen</button></div>` : ''}
+    <div class="hintline">Breite «Standard»: folgt der Einstellung oben (gleichmässig oder wachsend mit der Zahl der Einträge). Eine feste Breite (1×–6×) gilt nur für diese Station. Die Art der Achse lässt sich nach dem Anlegen nicht mehr ändern.</div>` : ''}
     <label>Kategorien (höchstens ${MAXCATS}; die Reihenfolge bestimmt die Bahnen)</label><div id="s-cats"></div>
     <div style="margin-top:.6rem"><button class="btn" id="s-add">+ Kategorie</button></div>
+    <div class="hintline">Darstellung «Balken»: Die Einträge dieser Kategorie erscheinen als Balken mit Namen in einer eigenen Zone, z.B. Personen als Lebensbalken (Beginn = Geburt, Ende = Tod) oder Figuren eines Buches.</div>
     <div class="actions"><span class="sp"></span><span class="err" id="s-err"></span><button class="btn" id="s-cancel">Abbrechen</button><button class="btn primary" id="s-save">Speichern</button></div>`;
   $('#s-titel').value = SET.titel; $('#s-titel').oninput = () => SET.titel = $('#s-titel').value;
-  document.querySelectorAll('#s-size button').forEach(b => { b.classList.toggle('on', (b.dataset.s === 'gross') === SET.gross); b.onclick = () => { SET.gross = b.dataset.s === 'gross'; renderSettings(); }; });
+  document.querySelectorAll('#s-size button').forEach(b => { b.classList.toggle('on', b.dataset.s === SET.size); b.onclick = () => { SET.size = b.dataset.s; renderSettings(); }; });
   BGS.forEach(([k, n]) => { const b = el('button'); b.type = 'button'; if (SET.bg === k) b.classList.add('on'); b.innerHTML = `<i class="bgdot" style="background:${BGCOL[k]}"></i>${n}`; b.onclick = () => { SET.bg = k; renderSettings(); }; $('#s-bg').append(b); });
+  if (S.st){
+    document.querySelectorAll('#s-abst button').forEach(b => { b.classList.toggle('on', b.dataset.a === SET.abst); b.onclick = () => { SET.abst = b.dataset.a; renderSettings(); }; });
+    document.querySelectorAll('#s-bm button').forEach(b => { b.classList.toggle('on', b.dataset.m === SET.bm); b.onclick = () => { SET.bm = b.dataset.m; renderSettings(); }; });
+    document.querySelectorAll('#s-am button').forEach(b => { b.classList.toggle('on', Number(b.dataset.n) === SET.am); b.onclick = () => { SET.am = Number(b.dataset.n); renderSettings(); }; });
+    const sb = $('#s-sts'), usedSt = id => S.data.events.filter(e => e.station === id || e.stationEnde === id).length;
+    SET.sts.forEach((t, i) => {
+      const r = el('div', 'catrow'), inp = el('input'); inp.type = 'text'; inp.setAttribute('enterkeyhint', 'done'); inp.value = t.label; inp.oninput = () => t.label = inp.value;
+      const br = el('select'); br.style.cssText = 'width:7rem;flex:none'; br.title = 'Breite der Station';
+      [['', 'Standard'], ['1', '1×'], ['2', '2×'], ['3', '3×'], ['4', '4×'], ['6', '6×']].forEach(([v, n]) => { const o = el('option'); o.value = v; o.textContent = n; br.append(o); });
+      br.value = t.breite ? String(t.breite) : ''; br.onchange = () => { if (br.value) t.breite = Number(br.value); else delete t.breite; };
+      const up = el('button', 'mini'); up.textContent = '↑'; up.disabled = i === 0; up.onclick = () => { [SET.sts[i-1], SET.sts[i]] = [SET.sts[i], SET.sts[i-1]]; renderSettings(); };
+      const dn = el('button', 'mini'); dn.textContent = '↓'; dn.disabled = i === SET.sts.length - 1; dn.onclick = () => { [SET.sts[i+1], SET.sts[i]] = [SET.sts[i], SET.sts[i+1]]; renderSettings(); };
+      const rm = el('button', 'mini'), n = usedSt(t.id); rm.textContent = '✕'; rm.disabled = n > 0 || SET.sts.length <= 1;
+      rm.title = n ? `${n} Eintrag/Einträge hängen an dieser Station: erst verschieben oder löschen` : 'Entfernen'; rm.onclick = () => { SET.sts.splice(i, 1); renderSettings(); };
+      r.append(inp, br, up, dn, rm); sb.append(r);
+    });
+    $('#s-stadd').onclick = () => {
+      const nums = SET.sts.map(t => parseInt(String(t.id).replace(/\D/g, ''), 10) || 0), id = 's' + (Math.max(0, ...nums) + 1), u = (S.data.achse.einheit) || 'Station';
+      SET.sts.push({ id, label:`${u} ${SET.sts.length + 1}` }); renderSettings(); const ins = document.querySelectorAll('#s-sts input'); if (ins.length) ins[ins.length - 1].select();
+    };
+  }
+  if (S.st){
+    $('#s-stmulti').onclick = () => { SET.multi = !SET.multi; renderSettings(); const ta = $('#s-stlines'); if (ta) ta.focus(); };
+    if (SET.multi){
+      $('#s-stlines').value = SET.multiText; $('#s-stlines').oninput = () => SET.multiText = $('#s-stlines').value;
+      $('#s-stlinesgo').onclick = () => {
+        const lines = SET.multiText.split('\n').map(x => x.trim()).filter(Boolean); if (!lines.length) return;
+        if (SET.sts.length + lines.length > 200) return $('#s-err').textContent = 'Höchstens 200 Stationen.';
+        let n = Math.max(0, ...SET.sts.map(t => parseInt(String(t.id).replace(/\D/g, ''), 10) || 0));
+        lines.forEach(l => SET.sts.push({ id:'s' + (++n), label:l })); SET.multi = false; SET.multiText = ''; renderSettings();
+        const ins = document.querySelectorAll('#s-sts input'); if (ins.length) ins[ins.length - 1].scrollIntoView({ block:'nearest' });
+      };
+    }
+  }
   const box = $('#s-cats');
   SET.cats.forEach((c, i) => {
     const blk = el('div'), r = el('div', 'catrow'); const sws = el('div', 'sws');
@@ -1249,9 +1526,12 @@ function renderSettings(){
     const inp = el('input'); inp.type = 'text'; inp.setAttribute('enterkeyhint', 'done'); inp.value = c.name; inp.oninput = () => c.name = inp.value;
     const up = el('button', 'mini'); up.textContent = '↑'; up.disabled = i === 0; up.onclick = () => { [SET.cats[i-1], SET.cats[i]] = [SET.cats[i], SET.cats[i-1]]; renderSettings(); };
     const dn = el('button', 'mini'); dn.textContent = '↓'; dn.disabled = i === SET.cats.length - 1; dn.onclick = () => { [SET.cats[i+1], SET.cats[i]] = [SET.cats[i], SET.cats[i+1]]; renderSettings(); };
-    const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = c.id && used(c.id) ? `${used(c.id)} Ereignis(se) verlieren ihre Kategorie` : 'Entfernen';
-    rm.onclick = () => { const n = c.id ? used(c.id) : 0; if (n && !confirm(`${n} Ereignis(se) verlieren die Kategorie «${c.name}». Trotzdem entfernen?`)) return; SET.cats.splice(i, 1); renderSettings(); };
-    r.append(sws, inp, up, dn, rm); blk.append(r);
+    const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = c.id && used(c.id) ? V(`${used(c.id)} Ereignis(se) verlieren ihre Kategorie`) : 'Entfernen';
+    rm.onclick = () => { const n = c.id ? used(c.id) : 0; if (n && !confirm(V(`${n} Ereignis(se) verlieren die Kategorie «${c.name}». Trotzdem entfernen?`))) return; SET.cats.splice(i, 1); renderSettings(); };
+    const ds = el('select'); ds.style.cssText = 'width:6.4rem;flex:none'; ds.title = 'Darstellung der Einträge dieser Kategorie';
+    [['karte', 'Karte'], ['balken', 'Balken']].forEach(([v, n]) => { const o = el('option'); o.value = v; o.textContent = n; ds.append(o); });
+    ds.value = c.darstellung === 'balken' ? 'balken' : 'karte'; ds.onchange = () => { if (ds.value === 'balken') c.darstellung = 'balken'; else delete c.darstellung; };
+    r.append(sws, inp, ds, up, dn, rm); blk.append(r);
     if (SET.pal === i){
       const xp = el('div', 'xpal');
       EXTRA.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; SET.pal = -1; renderSettings(); }; xp.append(b); });
@@ -1266,19 +1546,29 @@ function renderSettings(){
   $('#s-x').onclick = $('#s-cancel').onclick = () => $('#settings').hidden = true;
   $('#s-save').onclick = async () => {
     if (SET.cats.some(c => !c.name.trim())) return $('#s-err').textContent = 'Jede Kategorie braucht einen Namen.';
+    if (S.st && SET.sts.some(t => !String(t.label).trim())) return $('#s-err').textContent = 'Jede Station braucht eine Beschriftung.';
     const ids = new Set(SET.cats.map(c => c.id).filter(Boolean)); const out = [];
     for (const c of SET.cats){
       let id = c.id; if (!id){ let b = slug(c.name) || 'kategorie', n = 2; id = b; while (ids.has(id)) id = `${b}-${n++}`; ids.add(id); }
-      out.push({ id, name: c.name.trim(), farbe: c.farbe });
+      out.push({ id, name: c.name.trim(), farbe: c.farbe, ...(c.darstellung === 'balken' ? { darstellung:'balken' } : {}) });
     }
     S.data.titel = SET.titel.trim() || S.src.name; S.data.kategorien = out;
-    if (SET.gross) S.data.kartengroesse = 'gross'; else delete S.data.kartengroesse;
+    if (SET.size !== 'normal') S.data.kartengroesse = SET.size; else delete S.data.kartengroesse;
     if (SET.bg !== 'warm') S.data.hintergrund = SET.bg; else delete S.data.hintergrund;
     applyBg();
+    let abChanged = false;
+    if (S.st){
+      abChanged = (S.data.achse.abstand || 'normal') !== SET.abst;
+      S.data.achse.stationen = SET.sts.map(t => ({ id:t.id, label:String(t.label).trim(), ...(t.breite ? { breite:t.breite } : {}) }));
+      if (SET.abst === 'normal') delete S.data.achse.abstand; else S.data.achse.abstand = SET.abst;
+      if (SET.bm === 'auto'){ S.data.achse.breitenmodus = 'auto'; if (SET.am === 4) delete S.data.achse.autoMax; else S.data.achse.autoMax = SET.am; } else { delete S.data.achse.breitenmodus; delete S.data.achse.autoMax; }
+    }
     S.data.events.forEach(e => { if (e.kategorie && !ids.has(e.kategorie)) delete e.kategorie; });
-    $('#ttl').textContent = S.data.titel; document.title = S.data.titel + ' – Zeitstrahl';
+    $('#ttl').textContent = S.data.titel; document.title = winTitle(S.data.titel);
     [...S.hidden].forEach(h => { if (!ids.has(h)) S.hidden.delete(h); });
-    $('#settings').hidden = true; refresh(); await saveData();
+    $('#settings').hidden = true; refresh();
+    if (abChanged){ S.ppd = initialPpd(); layout(); renderTicks(); }
+    await saveData();
   };
 }
 $('#settings').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); $('#settings').hidden = true; } });
@@ -1322,7 +1612,7 @@ function renderStories(){
     if (!stories.length) list.innerHTML = '<p class="mute">Noch keine Story angelegt.</p>';
     stories.forEach(s => {
       const row = el('div', 'catrow');
-      const name = el('span'); name.style.flex = '1'; name.textContent = `${s.name} (${s.events.length} Ereignis${s.events.length === 1 ? '' : 'se'})`;
+      const name = el('span'); name.style.flex = '1'; name.textContent = `${s.name} (${s.events.length} ${S.st ? (s.events.length === 1 ? 'Eintrag' : 'Einträge') : (s.events.length === 1 ? 'Ereignis' : 'Ereignisse')})`;
       const edit = el('button', 'mini'); edit.textContent = 'Bearbeiten';
       edit.onclick = () => { STO.mode = 'edit'; STO.editing = { id:s.id, name:s.name, events:new Set(s.events) }; STO.catHidden = new Set(); renderStories(); };
       const del = el('button', 'mini'); del.textContent = '✕'; del.title = 'Löschen';
@@ -1339,7 +1629,7 @@ function renderStories(){
     const ev = STO.editing; let onlySel = false;
     sh.innerHTML = `<button class="sheet-x" id="st-x" aria-label="Schliessen">✕</button><h2>${ev.id ? 'Story bearbeiten' : 'Neue Story'}</h2>
       <label>Name</label><input type="text" id="st-name" enterkeyhint="done">
-      <label>Ereignisse (chronologisch — Häkchen setzen, was zur Story gehört)</label>
+      <label>${V('Ereignisse (chronologisch')} — Häkchen setzen, was zur Story gehört)</label>
       <input type="text" id="st-search" placeholder="Suchen nach Titel oder Jahr …" autocomplete="off">
       <div id="st-catfilter" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem"></div>
       <div style="display:flex;align-items:center;gap:.7rem;margin-top:.6rem">
@@ -1365,7 +1655,7 @@ function renderStories(){
         if (q && !`${e.titel} ${fmtEvent(e)}`.toLowerCase().includes(q)) return false;
         return true;
       });
-      if (!list.length) box.innerHTML = `<p class="mute">${S.events.length ? 'Nichts gefunden.' : 'Noch keine Ereignisse vorhanden.'}</p>`;
+      if (!list.length) box.innerHTML = `<p class="mute">${S.events.length ? 'Nichts gefunden.' : V('Noch keine Ereignisse vorhanden.')}</p>`;
       list.forEach(e => {
         const row = el('label'); row.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.3rem 0;cursor:pointer';
         const cb = el('input'); cb.type = 'checkbox'; cb.checked = ev.events.has(e.id);
@@ -1392,7 +1682,7 @@ function renderStories(){
     };
     $('#st-save').onclick = async () => {
       const name = $('#st-name').value.trim(); if (!name) return $('#st-err').textContent = 'Name fehlt.';
-      if (!ev.events.size) return $('#st-err').textContent = 'Mindestens ein Ereignis auswählen.';
+      if (!ev.events.size) return $('#st-err').textContent = V('Mindestens ein Ereignis auswählen.');
       let id = ev.id;
       if (!id){ const ids = new Set((S.data.stories || []).map(x => x.id)); let b = slug(name) || 'story', n = 2; id = b; while (ids.has(id)) id = `${b}-${n++}`; }
       const rec = { id, name, events:[...ev.events] };
@@ -1417,6 +1707,7 @@ function setEditing(on){
 $('#btnEdit').onclick = () => setEditing(!S.editing);
 /* Datum-Vorgabe für eine Position auf dem Zeitstrahl; im v.-Chr.-Bereich bleibt das Jahr leer und der Schalter «v. Chr.» ist an */
 function dateAtX(x, full){
+  if (S.st){ const i = Math.min(S.st.n - 1, Math.max(0, Math.floor(xToDay(x)))); return { station: S.st.list[i].id }; }
   const v = xToDay(x);
   if (isBc(v)) return { datum:'', bc:true };
   const c = civilFromDays(Math.round(v)), prec = full || S.ppd >= 24 ? 'd' : S.ppd * 30.4 >= 40 ? 'm' : 'y';
@@ -1496,24 +1787,28 @@ function downloadBlob(blob, name){
   const a = el('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 20000);
 }
-function buildWebHtml(self, titel){
+function buildWebHtml(self, titel, cfg = { base:'daten/' }){
   if (!self || self.length < 40000 || self.split(WEBMARK).length !== 2 || !self.includes('const VERSION'))
     throw new Error('Die App-Datei konnte nicht gelesen werden. Bitte die Seite neu laden und nochmals versuchen.');
-  const h = self.replace(WEBMARK, () => JSON.stringify({ base:'daten/' }))
+  const h = self.replace(WEBMARK, () => JSON.stringify(cfg))
     .replace(/<html[^>]*>/, '<html lang="de-CH">').replace(/<title>[\s\S]*?<\/title>/, () => `<title>${esc(titel)}</title>`)
     .replace(/^<!doctype html>\s*/i, '');
-  return `<!doctype html>\n<!-- Zeitstrahl · Version ${VERSION} (${VERSION_DATE}) · Autor: ${AUTHOR} · Nur-Ansicht-Export für GitHub Pages -->\n${h}`;
+  return `<!doctype html>\n<!-- Zeitstrahl · Version ${VERSION} (${VERSION_DATE}) · Autor: ${AUTHOR} · Export als Webseite (View Only) -->\n${h}`;
 }
-const WEB_README = `ZEITSTRAHL FÜR GITHUB PAGES (NUR ANSICHT)
+const webReadme = enc => `ZEITSTRAHL ALS WEBSEITE (VIEW ONLY) FÜR GITHUB PAGES
 =========================================
 
 Inhalt:
   index.html   die Webseite, sie zeigt den Zeitstrahl nur zum Ansehen
-  daten/       der Zeitstrahl (zeitstrahl.json, notizen/, bilder/)
+  daten/       der Zeitstrahl (${enc ? 'verschlüsselt, nur Nummern als Dateinamen' : 'zeitstrahl.json, notizen/, bilder/'})
 
-ACHTUNG: Alles, was du hochlädst, ist im Internet öffentlich sichtbar,
+${enc ? `PASSWORTGESCHÜTZT: Wer die Seite öffnet, muss das Passwort eingeben. Texte, Bilder und Dateinamen
+in «daten» sind verschlüsselt. Das Passwort steht nirgends in dieser Zip-Datei und lässt sich nicht
+wiederherstellen: gut aufbewahren. Bei Verlust einen neuen Export mit neuem Passwort machen.
+Das schützt vor Suchmaschinen und Bild-Crawlern; Vertrauliches gehört trotzdem nicht ins Internet.
+` : `ACHTUNG: Alles, was du hochlädst, ist im Internet öffentlich sichtbar,
 auch Bilder und Notizen. Vorher prüfen: Bildrechte, Namen, Persönliches.
-
+`}
 1. Diese Zip-Datei entpacken.
 2. Auf github.com ein NEUES Repository anlegen (Public), z.B. «meine-wirtschaftsgeschichte».
    Nicht in das Repository der Zeitstrahl-App hochladen, sonst wird deren index.html überschrieben.
@@ -1527,17 +1822,107 @@ auch Bilder und Notizen. Vorher prüfen: Bildrechte, Namen, Persönliches.
 
 Hinweis: index.html funktioniert nur im Internet oder über einen Webserver, nicht per Doppelklick auf dem Computer.
 `;
-async function exportWeb(selfHtml = SELF){
+
+/* ----- Passwortschutz (Web Crypto): AES-GCM, Schlüssel per PBKDF2 aus dem Passwort. Im Export liegen unter daten/ nur Dateien mit Nummern als Namen;
+   daten/0.bin ist das (ebenfalls verschlüsselte) Verzeichnis «Pfad → Nummer, Typ». Das Passwort steht nirgends. ----- */
+const PW_ITER = 250000;
+const b64 = u8 => { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const hasCrypto = () => typeof crypto !== 'undefined' && !!crypto.subtle && typeof crypto.getRandomValues === 'function';
+async function deriveKey(pw, salt, iter, extractable = false){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pw).normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:iter, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, extractable, ['encrypt', 'decrypt']);
+}
+async function encBytes(key, buf){
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, buf));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out;
+}
+const decBytes = (key, u8) => crypto.subtle.decrypt({ name:'AES-GCM', iv:u8.subarray(0, 12) }, key, u8.subarray(12));
+class EncWebSource extends WebSource {
+  constructor(base, key, map){ super(base); this.key = key; this.map = map; }
+  async raw(path){
+    const k = path.replace(/(^|\/)_vorschau\//, '$1vorschau/'), m = this.map[k]; if (!m) throw notFound(path);
+    const r = await fetch(this.base + m.f); if (!r.ok) throw notFound(path);
+    return { buf: await decBytes(this.key, new Uint8Array(await r.arrayBuffer())), type: m.t || '' };
+  }
+  async file(path){ const { buf, type } = await this.raw(path); return new Blob([buf], { type }); }
+  async text(path){ return new TextDecoder().decode((await this.raw(path)).buf); }
+}
+async function openEncrypted(cfg, key){
+  const r = await fetch(cfg.base + '0.bin'); if (!r.ok) throw new Error('Die Datei daten/0.bin fehlt.');
+  const u8 = new Uint8Array(await r.arrayBuffer());
+  let m; try { m = JSON.parse(new TextDecoder().decode(await decBytes(key, u8))); } catch { const e = new Error('Falsches Passwort.'); e.wrong = true; throw e; }
+  return new EncWebSource(cfg.base, key, m.files || {});
+}
+const pwKey = () => 'zeitstrahl-key:' + location.pathname;
+async function unlockWeb(cfg){
+  if (!hasCrypto()) throw new Error('Diese Seite ist verschlüsselt und braucht eine sichere Verbindung (https). Bitte über den Link im Internet öffnen.');
+  try { const raw = sessionStorage.getItem(pwKey());                                    // schon entsperrt in dieser Sitzung (Neuladen)
+    if (raw){ try { return await openEncrypted(cfg, await crypto.subtle.importKey('raw', unb64(raw), 'AES-GCM', false, ['decrypt'])); } catch {} } } catch {}
+  const box = $('#welcome .box'); $('#welcome').hidden = false;
+  box.innerHTML = '<h1>Zeitstrahl</h1><p>Dieser Zeitstrahl ist mit einem Passwort geschützt.</p><form id="pwform"><input type="password" id="pwin" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort"> <button class="btn primary" type="submit" id="pwgo">Öffnen</button></form><p id="pwerr" role="alert"></p>';
+  return new Promise(resolve => {
+    $('#pwform').onsubmit = async ev => {
+      ev.preventDefault(); const pw = $('#pwin').value, err = $('#pwerr'); if (!pw) return;
+      $('#pwgo').disabled = true; err.textContent = 'Wird geprüft …';
+      try {
+        const key = await deriveKey(pw, unb64(cfg.enc.salt), cfg.enc.iter, true), src = await openEncrypted(cfg, key);
+        try { sessionStorage.setItem(pwKey(), b64(new Uint8Array(await crypto.subtle.exportKey('raw', key)))); } catch {}
+        resolve(src);
+      } catch (e){ err.textContent = e.wrong ? 'Falsches Passwort.' : 'Fehler: ' + e.message; $('#pwgo').disabled = false; $('#pwin').select(); }
+    };
+    $('#pwin').focus();
+  });
+}
+
+/* ----- Dialog zum Export ----- */
+function openWebDialog(){
   if (!S.data || WEB) return;
-  if (!confirm('Exportieren für GitHub Pages\n\nEs entsteht eine Zip-Datei mit einer Webseite, die diesen Zeitstrahl nur zum Ansehen zeigt (ohne Bearbeiten). Wenn du sie auf GitHub Pages hochlädst, ist der Zeitstrahl samt Bildern und Notizen öffentlich im Internet sichtbar.\n\nBitte prüfen: Dürfen alle Bilder und Texte veröffentlicht werden (Bildrechte, Namen, Persönliches)?\n\nWeiter?')) return;
+  const sh = $('#pdfsheet');
+  sh.innerHTML = `<button class="sheet-x" id="w-x" aria-label="Schliessen">✕</button><h2>Als Webseite exportieren (View Only)</h2>
+    <div class="hintline">Es entsteht eine Zip-Datei mit einer Webseite, die diesen Zeitstrahl nur zum Ansehen zeigt (kein Bearbeiten). Gedacht für GitHub Pages: Zip entpacken, in ein neues Repository hochladen, Pages einschalten. Die Schritte stehen in der Datei LIES-MICH.txt in der Zip.</div>
+    <div class="hintline" style="margin-top:.6rem"><b>Ohne Passwort ist alles öffentlich:</b> Zeitstrahl, Bilder und Notizen sind im Internet sichtbar und können von Suchmaschinen und Bild-Crawlern gefunden werden. Bitte prüfen: Bildrechte, Namen, Persönliches.</div>
+    <label class="chk" style="margin-top:1rem"><input type="checkbox" id="w-pw"> Mit Passwort schützen</label>
+    <div id="w-pwbox" hidden>
+      <label>Passwort (mindestens 6 Zeichen)</label><input type="password" id="w-p1" autocomplete="new-password">
+      <label>Passwort wiederholen</label><input type="password" id="w-p2" autocomplete="new-password">
+      <div class="hintline">Texte, Bilder und Dateinamen werden in der Zip verschlüsselt; wer die Seite öffnet, gibt das Passwort ein. Das hält Crawler und Zufallsbesucher ab. Das Passwort wird nirgends gespeichert und lässt sich nicht wiederherstellen (bei Verlust neu exportieren). Wer das Passwort kennt, sieht alles, und ein einfaches Passwort lässt sich erraten. Für Vertrauliches ist das kein Schutz.</div>
+    </div>
+    <div class="actions"><span class="sp"></span><span class="err" id="w-err"></span><button class="btn" id="w-cancel">Abbrechen</button><button class="btn primary" id="w-go">Zip erstellen</button></div>`;
+  const close = () => $('#pdfdlg').hidden = true;
+  $('#w-x').onclick = $('#w-cancel').onclick = close;
+  $('#w-pw').onchange = () => { $('#w-pwbox').hidden = !$('#w-pw').checked; $('#w-err').textContent = ''; if ($('#w-pw').checked) $('#w-p1').focus(); };
+  $('#w-go').onclick = () => {
+    const err = $('#w-err'); let pw = null;
+    if ($('#w-pw').checked){
+      pw = $('#w-p1').value;
+      if (pw.length < 6) return err.textContent = 'Das Passwort braucht mindestens 6 Zeichen.';
+      if (pw !== $('#w-p2').value) return err.textContent = 'Die beiden Passwörter sind nicht gleich.';
+      if (!hasCrypto()) return err.textContent = 'Dieser Browser kann hier nicht verschlüsseln (nur über https oder localhost).';
+    }
+    close(); exportWeb(SELF, pw);
+  };
+  $('#pdfdlg').hidden = false; $('#w-pw').focus();
+}
+
+async function exportWeb(selfHtml = SELF, pw = null){
+  if (!S.data || WEB) return;
   const adm = $('#admin');
   try {
     adm.classList.add('show'); setStatus('Export läuft …', false, true);
-    const titel = S.data.titel || S.src.name, html = buildWebHtml(selfHtml, titel);
+    const titel = S.data.titel || S.src.name, cfg = { base:'daten/' };
+    let key = null;
+    if (pw){
+      if (!hasCrypto()) throw new Error('Dieser Browser kann nicht verschlüsseln (nur über https oder localhost).');
+      const salt = crypto.getRandomValues(new Uint8Array(16)); key = await deriveKey(pw, salt, PW_ITER);
+      cfg.enc = { v:1, salt:b64(salt), iter:PW_ITER };
+    }
+    const html = buildWebHtml(selfHtml, pw ? 'Zeitstrahl (geschützt)' : titel, cfg);
     await saveChain;
     const paths = (await S.src.list()).filter(p => !skipExport(p)).sort();
-    const entries = [{ path:'index.html', blob:new Blob([html], { type:'text/html' }) }, { path:'LIES-MICH.txt', blob:new Blob([WEB_README], { type:'text/plain' }) }];
-    for (const path of paths) entries.push({ path:'daten/' + path, blob: await S.src.file(path) });
+    const entries = [{ path:'index.html', blob:new Blob([html], { type:'text/html' }) }, { path:'LIES-MICH.txt', blob:new Blob([webReadme(!!pw)], { type:'text/plain' }) }];
+    const data = [];                                           // alle Dateien unter daten/: { key: Pfad ohne daten/, blob }
+    for (const path of paths) data.push({ key:path, blob: await S.src.file(path) });
     const have = new Set(paths), done = new Set();
     for (const e of S.data.events){
       const p = e.bild; if (!p || p === 'keins' || done.has(p) || !have.has(p)) continue;
@@ -1545,23 +1930,36 @@ async function exportWeb(selfHtml = SELF){
       let b = null;
       try { b = await S.src.file(thumbPath(p)); } catch {}
       if (!b){ try { b = await makeThumb(await S.src.file(p)); } catch {} }
-      if (b) entries.push({ path:'daten/' + vorPath(p), blob:b });
+      if (b) data.push({ key:vorPath(p), blob:b });
     }
+    if (key){                                                  // verschlüsseln, Namen durch Nummern ersetzen (in zufälliger Reihenfolge)
+      const order = data.map((_, i) => i); for (let i = order.length - 1; i > 0; i--){ const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+      const files = {};
+      for (let n = 0; n < order.length; n++){
+        const d = data[order[n]], f = (n + 1) + '.bin'; setStatus(`Verschlüsseln … ${n + 1}/${order.length}`, false, true);
+        files[d.key] = { f, t:d.blob.type || mimeOf(d.key) };
+        entries.push({ path:'daten/' + f, blob:new Blob([await encBytes(key, await d.blob.arrayBuffer())]) });
+      }
+      entries.push({ path:'daten/0.bin', blob:new Blob([await encBytes(key, new TextEncoder().encode(JSON.stringify({ v:1, files })))]) });
+    } else for (const d of data) entries.push({ path:'daten/' + d.key, blob:d.blob });
     const root = (slug(titel) || 'zeitstrahl') + '-web';
     const blob = await buildZip(root, entries, (i, n) => setStatus(`Export … ${i}/${n}`, false, true));
     downloadBlob(blob, `${root}-${stampNow()}.zip`);
-    setStatus(`✓ Export für GitHub Pages: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
+    setStatus(`✓ Export als Webseite${pw ? ' (mit Passwort)' : ''}: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
     if (entries.length > 100) alert(`Der Export enthält ${entries.length} Dateien. GitHub nimmt über die Weboberfläche höchstens 100 Dateien pro Vorgang an: bitte in mehreren Etappen hochladen (Anleitung in LIES-MICH.txt).`);
   } catch (err){ setStatus('FEHLER beim Export', true); alert('Export fehlgeschlagen:\n' + err.message); }
   finally { setTimeout(() => adm.classList.remove('show'), 5000); }
 }
 async function startWeb(cfg){
   document.body.classList.add('web'); $('#welcome').hidden = true;
-  const src = new WebSource((cfg && cfg.base) || 'daten/');
-  try { setData(src, JSON.parse(await src.text('zeitstrahl.json'))); }
+  cfg = cfg || {}; cfg.base = cfg.base || 'daten/';
+  try {
+    const src = cfg.enc ? await unlockWeb(cfg) : new WebSource(cfg.base);
+    setData(src, JSON.parse(await src.text('zeitstrahl.json')));
+  }
   catch (err){
     $('#welcome').hidden = false;
-    $('#welcome .box').innerHTML = '<h1>Zeitstrahl</h1><p>Der Zeitstrahl konnte nicht geladen werden. Diese Seite funktioniert nur im Internet (GitHub Pages), nicht per Doppelklick auf dem Computer. Ausserdem muss der Ordner «daten» neben der Seite liegen.</p>';
+    $('#welcome .box').innerHTML = '<h1>Zeitstrahl</h1><p>' + (cfg.enc && err && err.message && !/NotFound/.test(err.name) ? esc(err.message) : 'Der Zeitstrahl konnte nicht geladen werden. Diese Seite funktioniert nur im Internet (GitHub Pages), nicht per Doppelklick auf dem Computer. Ausserdem muss der Ordner «daten» neben der Seite liegen.') + '</p>';
   }
 }
 
@@ -1587,42 +1985,42 @@ function openPdfDialog(fmt){
   const a1 = fmt === 'a1', sh = $('#pdfsheet');
   sh.innerHTML = `<button class="sheet-x" id="p-x" aria-label="Schliessen">✕</button><h2>${a1 ? 'Als PDF exportieren (Format A1)' : 'Als PDF exportieren'}</h2>
     <div class="hintline">Gedruckt wird die aktuelle Ansicht (${S.view === 'bahnen' ? 'Bahnen' : 'Achse'}) auf einer Seite ${a1 ? 'A1' : 'A4'} quer, ohne ausgeblendete Kategorien. ${a1 ? 'Bilder kommen in voller Auflösung (die Datei kann gross werden).' : ''} Im folgenden Druckfenster «Als PDF speichern» wählen.${a1 ? ' Falls der Browser das Format nicht übernimmt: dort A1 (841 × 594 mm) einstellen.' : ''}</div>
-    <label>Zeitraum (optional)</label>
+    ${S.st ? '' : `<label>Zeitraum (optional)</label>
     <div class="catrow"><span>von</span><input type="text" id="p-von" placeholder="Anfang" enterkeyhint="done" style="max-width:8rem"><span>bis</span><input type="text" id="p-bis" placeholder="Ende" enterkeyhint="done" style="max-width:8rem"></div>
-    <div class="hintline">Jahreszahlen, vor Christus mit Minus (z.B. -500). Leer lassen für alles. Zählt das Startjahr der Ereignisse.${a1 ? '' : ' Bei langen Zeitstrahlen mit vielen Ereignissen wird die Schrift auf A4 sehr klein: dann den Zeitraum eingrenzen oder das Format A1 wählen.'}</div>
+    <div class="hintline">Jahreszahlen, vor Christus mit Minus (z.B. -500). Leer lassen für alles. Zählt das Startjahr der Ereignisse.${a1 ? '' : ' Bei langen Zeitstrahlen mit vielen Ereignissen wird die Schrift auf A4 sehr klein: dann den Zeitraum eingrenzen oder das Format A1 wählen.'}</div>`}
     <div class="actions"><span class="sp"></span><span class="err" id="p-err"></span><button class="btn" id="p-cancel">Abbrechen</button><button class="btn primary" id="p-go">PDF erstellen</button></div>`;
   const close = () => $('#pdfdlg').hidden = true;
   $('#p-x').onclick = $('#p-cancel').onclick = close;
   $('#p-go').onclick = async () => {
-    const f = parseYearInput($('#p-von').value), t = parseYearInput($('#p-bis').value), err = $('#p-err');
+    const f = S.st ? { ya:null } : parseYearInput($('#p-von').value), t = S.st ? { ya:null } : parseYearInput($('#p-bis').value), err = $('#p-err');
     if (f.err || t.err) return err.textContent = 'Bitte Jahreszahlen eingeben, z.B. 1800 oder -500.';
     if (f.ya != null && t.ya != null && f.ya > t.ya) return err.textContent = '«von» muss vor «bis» liegen.';
     close(); setStatus('PDF wird vorbereitet …', false, true);
     try { await printTimeline(fmt, f.ya, t.ya); setStatus(''); }
     catch (e){ setStatus('FEHLER beim PDF', true); alert('PDF konnte nicht erstellt werden:\n' + e.message); }
   };
-  $('#pdfdlg').hidden = false; $('#p-von').focus();
+  $('#pdfdlg').hidden = false; (S.st ? $('#p-go') : $('#p-von')).focus();
 }
 $('#pdfdlg').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); $('#pdfdlg').hidden = true; } });
 function clearPrint(){ document.querySelectorAll('#printroot,#printstyle').forEach(x => x.remove()); }
 async function printTimeline(fmt, from, to){
-  const a1 = fmt === 'a1', vp = $('#viewport'), keep = { events:S.events, bcYears:S.bcYears, byId:S.byId, t0:S.t0, tmax:S.tmax, ppd:S.ppd, sel:S.sel, story:S.story, search:S.search };
+  const a1 = fmt === 'a1', vp = $('#viewport'), keep = { events:S.events, st:S.st, bcYears:S.bcYears, byId:S.byId, t0:S.t0, tmax:S.tmax, ppd:S.ppd, sel:S.sel, story:S.story, search:S.search };
   const sl = vp.scrollLeft, stp = vp.scrollTop, vis0 = vp.style.visibility;
   let html, Wc, Hc, rem, tone, headHtml, inner;
   vp.style.visibility = 'hidden';
   try {
     S.story = null; S.search = null; S.sel = null;
-    const raw = S.data.events.filter(e => { const a = parseDate(e.datum); return a && (from == null || a.ya >= from) && (to == null || a.ya <= to); });
+    const raw = S.st ? S.data.events : S.data.events.filter(e => { const a = parseDate(e.datum); return a && (from == null || a.ya >= from) && (to == null || a.ya <= to); });
     const p = prepare({ ...S.data, events: raw });
     if (!p.evs.length) throw new Error('Im gewählten Zeitraum gibt es keine Ereignisse.');
-    S.events = p.evs; S.bcYears = p.bcYears; reindex();
+    S.events = p.evs; S.bcYears = p.bcYears; S.st = p.st || null; reindex();
     /* Breite wählen: lange Zeitstrahlen werden in schmaler Ansicht sehr hoch (viele Ebenen), breitere Ansicht macht sie flacher. Die Breite mit dem grössten Massstab gewinnt. */
     const layoutAt = W => { S.printW = W; recomputeSpan(); S.ppd = S.minPpd; layout(); const r = { W, Wc:Math.ceil(S.contentRight + 2 * S.geo.rem), Hc:Math.ceil(S.geo.H) }; r.sc = printPlan(fmt, r.Wc, r.Hc).sc; return r; };
     let best = null, worse = 0;
     for (const W of PRINT_WS){ const r = layoutAt(W); if (!best || r.sc > best.sc){ best = r; worse = 0; } else if (++worse >= 2 || !S.vis.length) break; }
     if (S.printW !== best.W) layoutAt(best.W);
-    if (!S.vis.length) throw new Error('Es sind keine Ereignisse sichtbar (alle Kategorien ausgeblendet?).');
-    await Promise.all(S.vis.map(e => e._tp).filter(Boolean).map(q => q.catch(() => {})));      // Vorschaubilder fertig laden
+    if (!S.vis.length) throw new Error(V('Es sind keine Ereignisse sichtbar (alle Kategorien ausgeblendet?).'));
+    await Promise.all(S.vis.flatMap(e => [e._tp, e._ip]).filter(Boolean).map(q => q.catch(() => {})));      // Vorschaubilder fertig laden
     if (a1) for (const e of S.vis){                                                              // Plakat: Originalbilder
       const img = hasImg(e) && !e.thumbFail && e.el && e.el.querySelector('img'); if (!img) continue;
       try { img.src = await assetUrl(e.bild); } catch {}
@@ -1633,7 +2031,7 @@ async function printTimeline(fmt, from, to){
     headHtml = `<div class="pp-row"><h1>${esc(S.data.titel || S.src.name)}</h1>${metaText()}</div><div class="pp-leg">${leg}</div>`;
     inner = $('#stage').cloneNode(true); inner.removeAttribute('id'); inner.style.position = 'relative';
   } finally {
-    S.printW = 0; S.events = keep.events; S.bcYears = keep.bcYears; S.byId = keep.byId; S.t0 = keep.t0; S.tmax = keep.tmax; S.ppd = keep.ppd;
+    S.printW = 0; S.events = keep.events; S.st = keep.st; S.bcYears = keep.bcYears; S.byId = keep.byId; S.t0 = keep.t0; S.tmax = keep.tmax; S.ppd = keep.ppd;
     S.sel = keep.sel; S.story = keep.story; S.search = keep.search;
     updateMetrics(); layout(); vp.scrollLeft = sl; vp.scrollTop = stp; renderTicks(); vp.style.visibility = vis0;
   }
@@ -1656,11 +2054,20 @@ async function printTimeline(fmt, from, to){
 /* ========== Menü ========== */
 $('#btnMenu').onclick = ev => { ev.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
 document.addEventListener('click', ev => { if (!ev.target.closest('#menu')) $('#menu').hidden = true; });
-$('#mFolder').onclick = () => { if (S.dirty && !confirm('Es gibt ungesicherte Änderungen. Trotzdem zu einem anderen Zeitstrahl wechseln?')) return; $('#menu').hidden = true; $('#verwarn').hidden = true; if (S.editing) setEditing(false); S.data = null; applyBg(); $('#welcome').hidden = false; $('#viewtools').hidden = true; $('#admin').hidden = true; closeDetail(); };
+/* Zurück zur Startseite: Zeitstrahl wegblenden und Scroll auf 0 (die Startseite liegt im Scrollbereich und war sonst ausserhalb des Bildschirms) */
+function showStart(){
+  if (S.dirty && !confirm('Es gibt ungesicherte Änderungen. Trotzdem zur Startseite wechseln?')) return;
+  $('#menu').hidden = true; $('#verwarn').hidden = true; if (S.editing) setEditing(false);
+  closeDetail(); closeSearch(false); S.data = null; S.sel = null; S.story = null; applyBg();
+  document.body.classList.add('start'); const vp = $('#viewport'); vp.scrollLeft = 0; vp.scrollTop = 0;
+  $('#welcome').hidden = false; $('#viewtools').hidden = true; $('#admin').hidden = true;
+  $('#ttl').textContent = 'Zeitstrahl'; document.title = 'Zeitstrahl'; $('#caption').className = 'hint'; $('#caption').innerHTML = '';
+}
+$('#mFolder').onclick = showStart;
 $('#mSettings').onclick = () => { $('#menu').hidden = true; openSettings(); };
 $('#mStories').onclick = () => { $('#menu').hidden = true; openStories(); };
 $('#mExport').onclick = () => { $('#menu').hidden = true; exportZip(); };
-$('#mWeb').onclick = () => { $('#menu').hidden = true; exportWeb(); };
+$('#mWeb').onclick = () => { $('#menu').hidden = true; openWebDialog(); };
 $('#mPdf').onclick = () => { $('#menu').hidden = true; openPdfDialog('a4'); };
 $('#mPdfA1').onclick = () => { $('#menu').hidden = true; openPdfDialog('a1'); };
 $('#mSave').onclick = () => { $('#menu').hidden = true; saveFile(); };
@@ -1680,7 +2087,7 @@ document.addEventListener('keydown', blurOnEnter);
 document.addEventListener('keydown', ev => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) || ev.target.isContentEditable) return;
   if (ev.metaKey || ev.ctrlKey || ev.altKey || !S.data) return;
-  if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden || !$('#pdfdlg').hidden) return;
+  if (!$('#editor').hidden || !$('#settings').hidden || !$('#stories').hidden || !$('#pdfdlg').hidden || !$('#setupdlg').hidden) return;
   const k = ev.key, vp = $('#viewport');
   if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else if (S.search || !$('#searchbar').hidden) closeSearch(); else select(null, false); }
   else if (k === '/' && !S.det){ ev.preventDefault(); openSearch(); }
@@ -1842,10 +2249,63 @@ async function openZipFile(file){
   try { const files = await unzipBlob(file); await loadFrom(new ZipSource(String(file.name || 'Zeitstrahl').replace(/\.zip$/i, ''), files)); }
   catch (err){ alert('Die Datei konnte nicht geöffnet werden:\n' + err.message); }
 }
-function newInMemory(){
-  const t = (prompt('Titel des neuen Zeitstrahls?', 'Mein Zeitstrahl') || '').trim(); if (!t) return Promise.resolve();
-  const files = new Map([['zeitstrahl.json', new Blob([JSON.stringify(newData(t), null, 2)], { type:'application/json' })]]);
-  return loadFrom(new ZipSource(t, files)).then(() => { S.dirty = true; updateFileStatus(); scheduleZip(); scheduleDraft(); });
+/* ========== Neu anlegen: Setup (Art der Achse, danach nicht mehr änderbar) ========== */
+const SETUP = { cancel:null };
+function openSetup(defTitle, intro){
+  return new Promise(resolve => {
+    const sh = $('#setupsheet');
+    sh.innerHTML = `<button class="sheet-x" id="n-x" aria-label="Schliessen">✕</button><h2>Neu anlegen</h2>
+      ${intro ? `<div class="hintline">${esc(intro)}</div>` : ''}
+      <label>Titel</label><input type="text" id="n-titel" autocomplete="off" enterkeyhint="done">
+      <label>Art</label>
+      <label class="kind"><input type="radio" name="n-kind" value="zeit" checked><div><b>Zeitstrahl</b><span>Ereignisse mit Datum auf einer Zeitachse: Geschichte, Biografien, Projekte.</span></div></label>
+      <label class="kind"><input type="radio" name="n-kind" value="num"><div><b>Nummerierte Stationen</b><span>Kapitel, Szenen, Lektionen: eine feste Reihenfolge 1, 2, 3 … (z.B. ein Buch).</span></div></label>
+      <label class="kind"><input type="radio" name="n-kind" value="eigen"><div><b>Eigene Stationen</b><span>Selbst benannte Stationen in fester Reihenfolge: Lernphasen, Reisestationen, Etappen.</span></div></label>
+      <div id="n-num" hidden><div class="row"><div><label>Einheit</label><input type="text" id="n-unit" value="Kapitel" autocomplete="off"></div>
+        <div><label>Anzahl (1–200)</label><input type="text" id="n-count" value="12" inputmode="numeric" autocomplete="off"></div></div></div>
+      <div id="n-eigen" hidden><label>Einheit</label><input type="text" id="n-unit2" value="Station" autocomplete="off">
+        <label>Stationen (eine pro Zeile, in der gewünschten Reihenfolge)</label><textarea id="n-lines" placeholder="Lernphase 1&#10;Lernphase 2&#10;Lernphase 3"></textarea></div>
+      <div class="hintline" style="margin-top:.8rem">Die Art lässt sich nach dem Anlegen nicht mehr ändern. Die Stationen selbst schon: umbenennen, ergänzen, verschieben (Einstellungen).</div>
+      <div class="actions"><span class="sp"></span><span class="err" id="n-err"></span><button class="btn" id="n-cancel">Abbrechen</button><button class="btn primary" id="n-go">Anlegen</button></div>`;
+    $('#n-titel').value = defTitle || 'Mein Zeitstrahl';
+    const kind = () => (document.querySelector('input[name="n-kind"]:checked') || {}).value || 'zeit';
+    const sync = () => { const k = kind(); $('#n-num').hidden = k !== 'num'; $('#n-eigen').hidden = k !== 'eigen'; $('#n-err').textContent = ''; };
+    document.querySelectorAll('input[name="n-kind"]').forEach(r => r.onchange = sync);
+    const done = v => { $('#setupdlg').hidden = true; SETUP.cancel = null; resolve(v); };
+    SETUP.cancel = () => done(null);
+    $('#n-x').onclick = $('#n-cancel').onclick = () => done(null);
+    $('#n-go').onclick = () => {
+      const err = $('#n-err'), titel = $('#n-titel').value.trim(), k = kind(); if (!titel) return err.textContent = 'Der Titel fehlt.';
+      let achse = null;
+      if (k === 'num'){
+        const unit = $('#n-unit').value.trim() || 'Kapitel', n = parseInt($('#n-count').value, 10);
+        if (!(n >= 1 && n <= 200)) return err.textContent = 'Die Anzahl muss zwischen 1 und 200 liegen.';
+        achse = { art:'stationen', einheit:unit, stationen:Array.from({ length:n }, (_, i) => ({ id:'s' + (i + 1), label:`${unit} ${i + 1}` })) };
+      } else if (k === 'eigen'){
+        const unit = $('#n-unit2').value.trim() || 'Station', lines = $('#n-lines').value.split('\n').map(x => x.trim()).filter(Boolean);
+        if (!lines.length) return err.textContent = 'Bitte mindestens eine Station eintragen.';
+        if (lines.length > 200) return err.textContent = 'Höchstens 200 Stationen.';
+        achse = { art:'stationen', einheit:unit, stationen:lines.map((l, i) => ({ id:'s' + (i + 1), label:l })) };
+      }
+      done(newData(titel, achse));
+    };
+    $('#setupdlg').hidden = false; $('#n-titel').focus(); $('#n-titel').select();
+  });
+}
+$('#setupdlg').addEventListener('keydown', ev => { if (ev.key === 'Escape'){ ev.preventDefault(); if (SETUP.cancel) SETUP.cancel(); } });
+async function newInMemory(){
+  const data = await openSetup('Mein Zeitstrahl'); if (!data) return;
+  const files = new Map([['zeitstrahl.json', new Blob([JSON.stringify(data, null, 2)], { type:'application/json' })]]);
+  return loadFrom(new ZipSource(data.titel, files)).then(() => { S.dirty = true; updateFileStatus(); scheduleZip(); scheduleDraft(); });
+}
+/* Neu anlegen: Setup, dann (mit Ordnerzugriff) einen leeren Ordner wählen, sonst im Arbeitsspeicher (Zip) */
+async function startNew(){
+  if (!window.showDirectoryPicker) return newInMemory();
+  const data = await openSetup('Mein Zeitstrahl', 'Danach wählst du einen leeren Ordner, in dem der Zeitstrahl gespeichert wird.'); if (!data) return;
+  let h; try { h = await showDirectoryPicker({ mode:'readwrite' }); } catch { return; }
+  const src = new DirSource(h); let has = true; try { await src.text('zeitstrahl.json'); } catch { has = false; }
+  if (has){ alert('In diesem Ordner gibt es schon einen Zeitstrahl. Bitte einen leeren Ordner wählen (oder «Ordner öffnen …» verwenden).'); return; }
+  await src.write('zeitstrahl.json', JSON.stringify(data, null, 2)); await idbSet('last', h); loadFrom(src);
 }
 function updateFileStatus(){
   if (!S.src || !S.src.fileMode) return;
@@ -1911,15 +2371,16 @@ async function openFolder(){
 $('#dirInput').onchange = ev => { const f = [...ev.target.files]; if (f.length) loadFrom(new ListSource(f)); ev.target.value = ''; };
 $('#btnOpen').onclick = openFolder;
 $('#btnDemo').onclick = () => loadFrom(new DemoSource(DEMO));
+$('#btnDemo2').onclick = () => loadFrom(new DemoSource(DEMO2));
 $('#btnZip').onclick = () => $('#zipInput').click();
 $('#zipInput').onchange = ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) openZipFile(f); };
-$('#btnNew').onclick = newInMemory;
+$('#btnNew').onclick = startNew;
 (async () => {
   if (WEB){ await startWeb(WEB); return; }
   const canFolder = !!window.showDirectoryPicker, ios = isIOS();
   $('#btnOpen').hidden = ios && !canFolder;                   // das iPad kennt keinen Ordnerzugriff
-  $('#btnNew').hidden = canFolder; if (ios) $('#btnNew').className = 'btn primary';
-  if (!canFolder) $('#warn').textContent = ios ? 'Auf dem iPad: «Neuer Zeitstrahl» oder «Zip-Datei öffnen». Gesichert wird mit «Sichern» (Teilen-Menü: Dateien, OneDrive, Teams).' : 'Dieser Browser kann nicht in Ordnern speichern. Starte mit «Neuer Zeitstrahl» oder «Zip-Datei öffnen».';
+  if (ios) $('#btnNew').className = 'btn primary';
+  if (!canFolder) $('#warn').textContent = ios ? 'Auf dem iPad: «Neu anlegen» oder «Zip-Datei öffnen». Gesichert wird mit «Sichern» (Teilen-Menü: Dateien, OneDrive, Teams).' : 'Dieser Browser kann nicht in Ordnern speichern. Starte mit «Neu anlegen» oder «Zip-Datei öffnen».';
   const h = await idbGet('last');
   if (h && h.kind === 'directory'){
     const b = $('#btnLast'); b.querySelector('span').textContent = h.name; b.hidden = false;
@@ -1940,7 +2401,8 @@ $('#btnNew').onclick = newInMemory;
   caption(null);
 })();
 
-/*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#c2185b"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.2"}, "notes": {}};/*DEMO_END*/
+/*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0", "darstellung": "balken"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#c2185b"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.8"}, "notes": {}};/*DEMO_END*/
+/*DEMO2_START*/const DEMO2 = {"data": {"titel": "Der Process (Beispiel für ein Buch)", "kategorien": [{"id": "handlung", "name": "Handlung", "farbe": "#2b59c3"}, {"id": "personen", "name": "Personen", "farbe": "#7b4fb0", "darstellung": "balken"}, {"id": "orte", "name": "Orte", "farbe": "#1e7a4f"}, {"id": "motive", "name": "Motive und Deutung", "farbe": "#9a6a00"}], "achse": {"art": "stationen", "einheit": "Kapitel", "abstand": "normal", "stationen": [{"id": "s1", "label": "Kapitel 1"}, {"id": "s2", "label": "Kapitel 2"}, {"id": "s3", "label": "Kapitel 3"}, {"id": "s4", "label": "Kapitel 4"}, {"id": "s5", "label": "Kapitel 5"}, {"id": "s6", "label": "Kapitel 6"}, {"id": "s7", "label": "Kapitel 7"}, {"id": "s8", "label": "Kapitel 8"}, {"id": "s9", "label": "Kapitel 9"}, {"id": "s10", "label": "Kapitel 10"}], "breitenmodus": "auto"}, "events": [{"id": "verhaftung", "titel": "Verhaftung am Morgen", "station": "s1", "kategorie": "handlung", "beschreibung": "Josef K. wird an seinem 30. Geburtstag in seinem Zimmer verhaftet. Eine Anklage nennt ihm niemand.", "notiz": "notizen/verhaftung.md"}, {"id": "josef-k", "titel": "Josef K.", "station": "s1", "kategorie": "personen", "beschreibung": "Prokurist in einer Bank, Hauptfigur. Er hält sich für einen ordentlichen Menschen und will sich rechtfertigen.", "notiz": "notizen/josef-k.md", "stationEnde": "s10"}, {"id": "waechter", "titel": "Die Wächter Franz und Willem", "station": "s1", "kategorie": "personen", "beschreibung": "Die beiden Männer, die K. festhalten. Sie wissen selbst wenig über das Verfahren."}, {"id": "grubach-buerstner", "titel": "Frau Grubach und Fräulein Bürstner", "station": "s1", "kategorie": "personen", "beschreibung": "Vermieterin und Nachbarin: K. verteidigt vor ihnen seine Unschuld."}, {"id": "schuld-ohne-anklage", "titel": "Schuld ohne Anklage", "station": "s1", "kategorie": "motive", "beschreibung": "Das zentrale Motiv: K. wird verfolgt, ohne zu wissen, wessen er beschuldigt wird.", "notiz": "notizen/schuld-ohne-anklage.md"}, {"id": "verfahren-laeuft", "titel": "Das Verfahren läuft weiter", "station": "s2", "kategorie": "motive", "beschreibung": "Über die ganze Handlung hinweg bleibt unklar, wer anklagt und nach welchen Regeln entschieden wird.", "stationEnde": "s9"}, {"id": "erste-untersuchung", "titel": "Erste Untersuchung", "station": "s2", "kategorie": "handlung", "beschreibung": "K. wird an einem Sonntag in ein Gerichtsgebäude in der Vorstadt bestellt und hält eine Rede gegen das Verfahren."}, {"id": "gerichtsgebaeude", "titel": "Das Gerichtsgebäude in der Vorstadt", "station": "s2", "kategorie": "orte", "beschreibung": "Ein Gericht in Mietshäusern und Dachböden, nicht in Palästen: Das Recht wirkt unscheinbar und allgegenwärtig."}, {"id": "sitzungssaal", "titel": "Im leeren Sitzungssaal", "station": "s3", "kategorie": "handlung", "beschreibung": "Am nächsten Sonntag findet K. keine Verhandlung vor, sondern nur den leeren Saal."}, {"id": "student-waschfrau", "titel": "Der Student und die Waschfrau", "station": "s3", "kategorie": "personen", "beschreibung": "Die Frau des Gerichtsdieners wird von einem Studenten bedrängt und weggetragen. Auch hier verwischen sich Recht und Willkür."}, {"id": "kanzleien", "titel": "Die Kanzleien", "station": "s3", "kategorie": "orte", "beschreibung": "Enge Räume mit schlechter Luft: K. wird schwindlig. Das Gericht macht ihn körperlich krank."}, {"id": "freundin", "titel": "Die Freundin von Fräulein Bürstner", "station": "s4", "kategorie": "handlung", "beschreibung": "K. sucht das Gespräch mit Fräulein Bürstner. Es kommt nicht so zustande, wie er es sich vorstellt."}, {"id": "pruegler", "titel": "Der Prügler", "station": "s5", "kategorie": "handlung", "beschreibung": "In einer Rumpelkammer der Bank findet K. die beiden Wächter, die wegen seiner Beschwerde bestraft werden."}, {"id": "hilfe-suchen", "titel": "K. sucht Hilfe", "station": "s6", "kategorie": "handlung", "beschreibung": "Onkel, Advokat, Fabrikant und Maler: K. versucht, sein Verfahren auf eigene Faust und mit fremder Hilfe zu steuern.", "stationEnde": "s8"}, {"id": "onkel", "titel": "Der Onkel", "station": "s6", "kategorie": "personen", "beschreibung": "Ein Verwandter vom Land, der K. zum Advokaten Huld bringt, aus Sorge um die Familienehre."}, {"id": "leni", "titel": "Leni", "station": "s6", "kategorie": "personen", "beschreibung": "Pflegerin im Haushalt des Advokaten. Sie ist freundlich zu K., doch auch sie gehört zum Umfeld des Gerichts.", "stationEnde": "s8"}, {"id": "advokat-huld", "titel": "Advokat Huld", "station": "s7", "kategorie": "personen", "beschreibung": "Krank, einflussreich und langsam. Er verspricht viel, tut aber wenig.", "stationEnde": "s8"}, {"id": "titorelli", "titel": "Der Maler Titorelli", "station": "s7", "kategorie": "personen", "beschreibung": "Gerichtsmaler mit Verbindungen zum Gericht. Er erklärt K., welche Ausgänge des Verfahrens möglich sind."}, {"id": "drei-wege", "titel": "Drei Auswege", "station": "s7", "kategorie": "motive", "beschreibung": "Titorelli beschreibt: wirkliche Freisprechung, scheinbare Freisprechung, Verschleppung. Für K. bleibt am Ende nur noch die Verschleppung.", "notiz": "notizen/drei-wege.md"}, {"id": "block", "titel": "Der Kaufmann Block", "station": "s8", "kategorie": "personen", "beschreibung": "Ein anderer Angeklagter, der sich dem Advokaten völlig unterwirft. K. sieht in ihm, wie er selbst enden könnte."}, {"id": "entlassung-advokat", "titel": "K. entlässt den Advokaten", "station": "s8", "kategorie": "handlung", "beschreibung": "K. will sein Verfahren selbst in die Hand nehmen und kündigt Huld."}, {"id": "dom", "titel": "Der Dom", "station": "s9", "kategorie": "orte", "beschreibung": "K. soll einem italienischen Geschäftsfreund die Stadt zeigen und trifft im Dom auf den Gefängniskaplan."}, {"id": "kaplan", "titel": "Der Gefängniskaplan", "station": "s9", "kategorie": "personen", "beschreibung": "Der Geistliche gehört zum Gericht und erzählt K. eine Parabel."}, {"id": "vor-dem-gesetz", "titel": "Vor dem Gesetz", "station": "s9", "kategorie": "motive", "beschreibung": "Die Türhüter-Legende: Ein Mann wartet sein Leben lang vor einer Tür, die nur für ihn bestimmt war. Die Deutungen der Szene sind bis heute offen.", "notiz": "notizen/vor-dem-gesetz.md"}, {"id": "ende", "titel": "Das Ende", "station": "s10", "kategorie": "handlung", "beschreibung": "Am Vorabend seines 31. Geburtstags wird K. von zwei Männern abgeholt und in einem Steinbruch getötet.", "notiz": "notizen/ende.md"}, {"id": "steinbruch", "titel": "Der Steinbruch", "station": "s10", "kategorie": "orte", "beschreibung": "Der Ort der Hinrichtung am Stadtrand. Der Roman bricht hier ab."}], "stories": [{"id": "hilfe", "name": "Wer kann K. helfen?", "events": ["onkel", "advokat-huld", "titorelli", "drei-wege", "block", "entlassung-advokat", "kaplan"]}], "appVersion": "1.9.1"}, "notes": {"notizen/schuld-ohne-anklage.md": "# Schuld ohne Anklage\n\nDas Verfahren kennt keine Anklageschrift. Wer sich verteidigen will, muss zuerst herausfinden, wessen er beschuldigt wird. Das macht jede Verteidigung unmöglich.\n\n**Deutungsansätze**\n\n- *Gesellschaftlich:* Eine anonyme Bürokratie hat Macht über Menschen, ohne sich zu erklären.\n- *Existenziell:* Schuld als Grundzustand, den der Mensch nicht abstreifen kann.\n- *Psychologisch:* K.s Schuld liegt in seiner Selbstgerechtigkeit.\n\nAlle drei Deutungen lassen sich am Text belegen. Das ist die Stärke der Erzählung.\n", "notizen/josef-k.md": "# Josef K.\n\nProkurist in einer Bank, ordentlich, ehrgeizig, mit festen Gewohnheiten. Seine Verhaftung stört genau diese Ordnung.\n\n**Entwicklung**\n\nZu Beginn glaubt K., ein Irrtum werde sich aufklären. Mit der Zeit dreht sich sein ganzes Leben um das Verfahren. Arbeit und Beziehungen treten zurück.\n\n**Frage:** Ist K. schuldig? Der Text gibt keine eindeutige Antwort, bietet aber Hinweise auf beide Lesarten.\n", "notizen/vor-dem-gesetz.md": "# Vor dem Gesetz\n\nDie Parabel steht im Dom. Ein Mann vom Land will durch eine Tür zum Gesetz. Der Türhüter lässt ihn nicht ein, noch nicht. Der Mann wartet Jahre, bis er stirbt. Dann erfährt er, dass die Tür nur für ihn bestimmt war.\n\n**Gespräch im Dom:** K. und der Geistliche streiten über die Deutung. Sie sind sich nicht einig, ob der Türhüter getäuscht hat oder getäuscht wurde.\n\n**Fragen**\n\n1. Was sagt die Parabel über K.s eigene Lage?\n2. Warum lässt Kafka die Deutung offen?\n", "notizen/drei-wege.md": "# Drei Auswege\n\nDer Maler Titorelli beschreibt K. die Möglichkeiten, aus dem Verfahren herauszukommen:\n\n| Weg | Wirkung |\n|---|---|\n| Wirkliche Freisprechung | Das Verfahren ist beendet. Titorelli sagt, er kenne keinen solchen Fall. |\n| Scheinbare Freisprechung | Das Verfahren ruht, kann aber jederzeit wieder aufgenommen werden. |\n| Verschleppung | Das Verfahren wird in den unteren Stufen gehalten und nie entschieden. |\n\n**Aufgabe:** Welchen Weg wählt K. in der Folge, und wie bewertet er die Lage?\n", "notizen/ende.md": "# Das Ende\n\nAm Abend vor seinem 31. Geburtstag holen zwei Männer K. ab. Er geht ohne grossen Widerstand mit, fast wie jemand, der erwartet hat, abgeholt zu werden.\n\nIm Steinbruch wird er getötet. Der letzte Gedanke des Romans gilt der Scham.\n\n**Zum Vergleich:** Der erste Satz spricht von einem Morgen, der letzte Teil spielt am Abend. Welche Rolle spielt diese Klammer für die Lesart?\n", "notizen/verhaftung.md": "# Verhaftung am Morgen\n\nDer Roman beginnt mit dem Satz, dass jemand Josef K. verleumdet haben müsse, denn ohne dass er etwas Böses getan hätte, wurde er eines Morgens verhaftet.\n\n**Was auffällt**\n\n- K. wird in seiner Wohnung festgenommen und nicht abgeführt. Er darf in die Bank gehen.\n- Der Grund der Verhaftung wird nicht genannt.\n- K. versucht sofort, sich zu rechtfertigen, und merkt nicht, dass er damit das Verfahren ernst nimmt.\n\n**Fragen für den Unterricht**\n\n1. Warum wehrt sich K. nicht stärker?\n2. Welche Wirkung hat es, dass das Verfahren zuerst so harmlos wirkt?\n"}};/*DEMO2_END*/
 </script>
 </body>
 </html>

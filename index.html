@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 2.0.2 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 2.0.4 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="2.0.2">
+<meta name="version" content="2.0.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -82,6 +82,9 @@ button{touch-action:manipulation}
 #viewport{flex:1;overflow:auto;position:relative}
 #stage{position:relative}
 .bar{position:absolute;left:0;right:0;height:4px;border-radius:2px;background:var(--axis)}
+.bar.fl{-webkit-mask-image:linear-gradient(to right,transparent,#000 5rem);mask-image:linear-gradient(to right,transparent,#000 5rem)}
+.bar.fr{-webkit-mask-image:linear-gradient(to left,transparent,#000 5rem);mask-image:linear-gradient(to left,transparent,#000 5rem)}
+.bar.fl.fr{-webkit-mask-image:linear-gradient(to right,transparent,#000 5rem,#000 calc(100% - 5rem),transparent);mask-image:linear-gradient(to right,transparent,#000 5rem,#000 calc(100% - 5rem),transparent)}
 .ticks{position:absolute;left:0;right:0;pointer-events:none}
 .ln{position:absolute;top:.5rem;width:1px;height:.6rem;background:var(--axis);opacity:.55}
 .ln.maj{width:2px;height:1.4rem;opacity:1}
@@ -382,7 +385,7 @@ body.web #admin{opacity:1}
 /* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
 const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '2.0.2', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
+const VERSION = '2.0.4', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
 /* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
 const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
@@ -760,6 +763,10 @@ function recomputeSpan(){
   /* Spanne der massstäblichen Achse (ab Jahr 1); die v.-Chr.-Stationen liegen davor und zählen hier nicht */
   const today = Date.now() / 864e5, ad = [];
   for (const e of S.events){ if (!isBc(e.pos)) ad.push(e.pos); if (e.b && !isBc(e.b.day)) ad.push(e.b.day); }
+  if (S.data) for (const m of S.data.markierungen || []){                                   // Markierungen gehören zur Achse (sonst würden Bereiche am Rand abgeschnitten)
+    if (m.aktiv === false) continue;
+    for (const [v, end] of [[m.von, false], [m.art === 'bereich' ? m.bis : null, true]]){ if (!v) continue; const p = parseDate(v, end); if (p && !p.bc) ad.push(p.day); }
+  }
   if (ad.length){ S.t0 = Math.min(...ad) - 30; S.tmax = Math.max(...ad) + 30; }
   else if (S.bcYears.length){ S.t0 = daysFromCivil(1, 1, 1); S.tmax = S.t0 + 365; }
   else { S.t0 = today - 395; S.tmax = today + 395; }
@@ -897,16 +904,27 @@ function barGeom(e){
   if (S.st){ const i = e.a.ya, j = e.b ? e.b.ya : i; return { l: S.pad + S.st.cum[i] * S.ppd + 2, r: S.pad + S.st.cum[j + 1] * S.ppd - 2 }; }
   const l = e.x, r = e.b ? dayToX(e.b.day) : e.x; return { l, r: Math.max(r, l + 8) };
 }
-const barDates = e => S.st ? '' : fmtEvent(e).replace(' – ', '–');
+const yearOf = p => p.bc ? `${p.y} v. Chr.` : String(p.y);
+const barDates = e => { if (S.st) return ''; if (e.ende === 'heute') return `seit ${yearOf(e.a)}`; if (!e.b || yearOf(e.a) === yearOf(e.b)) return yearOf(e.a);
+  return e.a.bc && e.b.bc ? `${e.a.y}–${e.b.y} v. Chr.` : `${yearOf(e.a)}–${yearOf(e.b)}`; };
 const hasIcon = e => e.bild !== 'keins';
-const barLabelLen = e => String(e.titel).length + (barDates(e) ? barDates(e).length + 1 : 0);
+const nameNeed = (e, txt = e.titel) => Math.min(30, String(txt).length * .5 + 1.6 + (hasIcon(e) ? 1.4 : 0)), dateNeed = e => barDates(e) ? barDates(e).length * .42 + .9 : 0;
+/* Kurzform für schmale Balken: das letzte Wort, aber nur wenn es sicher ein Nachname ist (2–4 Wörter, gross, mind. 3 Buchstaben, kein Punkt, kein «und») */
+function lastName(t){
+  const w = String(t || '').trim().split(/\s+/); if (w.length < 2 || w.length > 4 || w.some(x => /^(und|and|&)$/i.test(x))) return null;
+  const l = w[w.length - 1]; return /^[A-ZÄÖÜÉÈÀ]/.test(l) && l.length >= 3 && !l.endsWith('.') ? l : null;
+}
 /* Balken in Zeilen packen (nach Anfang sortiert); Ergebnis: Zahl der Zeilen. Reicht der Balken nicht für den Namen, steht der Name rechts daneben und braucht dort Platz. */
 function packBars(list, rem){
   const ends = [], gap = .4 * rem;
-  list.forEach(e => { e._g = barGeom(e); e._in = e._g.r - e._g.l >= Math.min(30, barLabelLen(e) * .5 + 1.6 + (hasIcon(e) ? 1.4 : 0)) * rem; });
+  list.forEach(e => {                                           // Stufen: ganzer Name im Balken, sonst Nachname im Balken, sonst Name daneben; Jahre nur, wenn auch sie Platz haben
+    e._g = barGeom(e); const w = e._g.r - e._g.l, ln = lastName(e.titel); e._lbl = e.titel; e._in = w >= nameNeed(e) * rem;
+    if (!e._in && ln && w >= nameNeed(e, ln) * rem){ e._lbl = ln; e._in = true; }
+    e._dt = !e._in || w >= (nameNeed(e, e._lbl) + dateNeed(e)) * rem;
+  });
   list.sort((a, b) => a._g.l - b._g.l);
   for (const e of list){
-    const ext = e._in ? e._g.r : e._g.r + gap + Math.min(30, barLabelLen(e) * .5 + .8) * rem; let k = 0;
+    const ext = e._in ? e._g.r : e._g.r + gap + (Math.min(30, String(e.titel).length * .5 + .8) + dateNeed(e)) * rem; let k = 0;
     while ((ends[k] ?? -1e9) > e._g.l - gap - .9 * rem) k++;
     ends[k] = ext; e.row = k; e._r = ext; e.x = e._g.l;
   }
@@ -915,9 +933,10 @@ function packBars(list, rem){
 function makeBar(e, col, top, dim, BH){
   const g = e._g, b = el('div', 'pbar' + nc(col) + (S.sel === e ? ' sel' : '') + (dim ? ' dim' : '') + (e._in ? '' : ' out') + (hasIcon(e) ? ' ic' : ''));
   b.style.setProperty('--c', col); b.style.left = g.l + 'px'; b.style.top = top + 'px'; b.style.width = Math.max(6, g.r - g.l) + 'px'; b.style.height = BH + 'px';
-  const dt = barDates(e), ini = () => `<i class="pi ini">${esc(initials(e.titel))}</i>`;
+  const dt = e._dt ? barDates(e) : '', ini = () => `<i class="pi ini">${esc(initials(e.titel))}</i>`;
   const img = hasIcon(e) && hasImg(e) && !e.thumbFail;
-  b.innerHTML = (hasIcon(e) ? (img ? '<img class="pi" alt="" draggable="false">' : ini()) : '') + `<span>${esc(e.titel)}${dt ? `<small>${esc(dt)}</small>` : ''}</span>`;
+  b.innerHTML = (hasIcon(e) ? (img ? '<img class="pi" alt="" draggable="false">' : ini()) : '') + `<span>${esc(e._lbl || e.titel)}${dt ? `<small>${esc(dt)}</small>` : ''}</span>`;
+  if (e._lbl && e._lbl !== e.titel) b.title = e.titel;
   e._ip = null;
   if (img){
     const im = b.querySelector('img'), key = iconKey(e), done = iconDone.get(key);
@@ -995,8 +1014,8 @@ function layout(){
   const vh = S.printW ? 0 : vp.clientHeight;
   /* Achsenbalken; mit Lücke zwischen dem v.-Chr.-Block und der Achse ab Jahr 1 */
   const addBars = (parent, top) => {
-    const mk = (l, w) => { const b = el('div', 'bar'); b.style.top = top + 'px'; b.style.left = l + 'px'; b.style.right = 'auto'; b.style.width = Math.max(0, w) + 'px'; parent.append(b); };
-    if (S.bcW > 0){ mk(0, S.pad + S.bcSlot * S.bcYears.length); mk(S.pad + S.bcW, W - S.pad - S.bcW); } else mk(0, W);
+    const mk = (l, w, fl, fr) => { const b = el('div', 'bar' + (fl ? ' fl' : '') + (fr ? ' fr' : '')); b.style.top = top + 'px'; b.style.left = l + 'px'; b.style.right = 'auto'; b.style.width = Math.max(0, w) + 'px'; parent.append(b); };
+    if (S.bcW > 0){ mk(0, S.pad + S.bcSlot * S.bcYears.length, true, false); mk(S.pad + S.bcW, W - S.pad - S.bcW, false, true); } else mk(0, W, true, true);
   };
 
   if (!bahn){

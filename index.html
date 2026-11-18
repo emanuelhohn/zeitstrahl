@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 1.9.1 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 2.0.2 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="1.9.1">
+<meta name="version" content="2.0.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -145,6 +145,18 @@ button{touch-action:manipulation}
 .span.nocat{background:repeating-linear-gradient(90deg,var(--mute) 0 6px,transparent 6px 10px);opacity:.7}
 .lane-label.nocat{background:var(--bg);border:1.5px dashed var(--mute);box-shadow:none}
 #caption .cd.nocat{border-left:5px dotted var(--mute)}
+.mklayer{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
+.mk{position:absolute;top:0;bottom:0;box-sizing:border-box}
+.mk.line{width:0;border-left:1px dashed color-mix(in srgb,var(--c,var(--mute)) 55%,transparent)}
+.mk.ras{width:0;border-left:1px dashed color-mix(in srgb,var(--mute) 32%,transparent)}
+.mk.band{border-left:1px dashed color-mix(in srgb,var(--c,var(--mute)) 45%,transparent);border-right:1px dashed color-mix(in srgb,var(--c,var(--mute)) 45%,transparent);
+  background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c,var(--mute)) 14%,transparent) 0 1.5px,transparent 1.5px 8px),color-mix(in srgb,var(--c,var(--mute)) 6%,transparent)}
+.mini.eye{display:inline-flex;align-items:center;justify-content:center;padding:.3rem .4rem;flex:none}
+.mini.eye.off{color:var(--mute)}
+.mklbl{position:sticky;height:0;z-index:7;pointer-events:none}
+.mklbl span{position:absolute;white-space:nowrap;font-size:.72rem;font-weight:600;padding:0 .25rem;border-radius:.2rem;
+  color:color-mix(in srgb,var(--c,var(--mute)) 85%,var(--ink));background:color-mix(in srgb,var(--bg) 78%,transparent)}
+.mklbl span.ras{font-weight:400;color:var(--mute);background:none}
 .pbar{position:absolute;display:flex;align-items:center;background:var(--c);color:#fff;border-radius:.85rem;font-size:.85rem;font-weight:600;
   cursor:pointer;z-index:2;box-shadow:var(--shadow);white-space:nowrap}
 .pbar span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;padding:0 .7rem}
@@ -187,7 +199,7 @@ button{touch-action:manipulation}
 #welcome .btn{margin:.3rem;padding:.6rem 1.1rem;font-size:1rem}
 body.start #viewport{overflow:hidden}
 body.start #stage{visibility:hidden}
-body.start #legend{display:none}
+body.start #legend,body.start #caption{display:none}
 #pwin{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--line);border-radius:.4rem;background:var(--panel);color:var(--ink);width:14rem;max-width:100%}
 #pwerr{color:var(--danger);min-height:1.3em;margin:.3rem 0 0}
 #warn,#wMode{font-size:.85rem}
@@ -262,6 +274,7 @@ body.start #legend{display:none}
 .form label.kind span{display:block;color:var(--mute);font-size:.85rem}
 .examples{margin:2rem 0 .3rem;padding-top:1rem;border-top:1px solid var(--line)}
 .examples .exl{font-size:.8rem;color:var(--mute);margin-bottom:.2rem}
+#welcome .examples .btn{padding:.5rem .85rem;font-size:.92rem}
 .bgdot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;border:1px solid var(--mute);margin-right:.35rem;vertical-align:-.1rem}
 /* Hintergrundfarbe (nur im hellen Modus; Karten bleiben weiss) */
 :root[data-bg=milchig]:not([data-theme=dark]){--bg:#fbf5e0}
@@ -291,7 +304,7 @@ body.web #admin{opacity:1}
 .mini.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 </style>
 </head>
-<body>
+<body class="start">
 
 <header id="top">
   <h1 id="ttl">Zeitstrahl</h1>
@@ -317,6 +330,7 @@ body.web #admin{opacity:1}
   <button id="mFolder">Zurück zur Startseite</button>
   <button id="mSettings">Zeitstrahl-Einstellungen …</button>
   <button id="mStories">Stories verwalten …</button>
+  <button id="mMarks" hidden>Markierungen ausblenden (M)</button>
   <button id="mSave" hidden>Sichern …</button>
   <button id="mExport">Exportieren für Backup (Zip) …</button>
   <button id="mWeb">Exportieren als Webseite (View Only, Zip) …</button>
@@ -341,7 +355,8 @@ body.web #admin{opacity:1}
       <button class="btn" id="btnDraft" hidden>Entwurf fortsetzen: <span></span></button><button class="mini" id="btnDraftX" hidden title="Entwurf verwerfen">✕</button>
       <div class="examples"><div class="exl">Beispiele ansehen</div>
         <button class="btn" id="btnDemo">Wirtschaftsgeschichte</button>
-        <button class="btn" id="btnDemo2">Buch: Der Process</button></div>
+        <button class="btn" id="btnDemo2">Buch: Der Process</button>
+        <button class="btn" id="btnDemo3">Rezessionen</button></div>
       <p id="wMode">Direkt in einem Ordner speichern, ganz ohne Internet, geht nur mit Google Chrome oder Microsoft Edge am Computer. Mit Safari, Firefox und auf dem iPad arbeitest du mit einer Zip-Datei und sicherst selbst mit «Sichern».</p>
       <p id="warn"></p>
       <p id="wInfo"></p>
@@ -367,7 +382,7 @@ body.web #admin{opacity:1}
 /* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
 const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '1.9.1', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
+const VERSION = '2.0.2', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
 /* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
 const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
@@ -377,7 +392,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const pad2 = n => String(n).padStart(2, '0');
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const hint = () => '← → blättern · Enter Details · Strg + Scrollen oder + / − zoomen · 0 Überblick · B Achse/Bahnen' +
-  ((S.data && S.data.stories || []).length ? ' · S Story' : '') + ' · / Suche · T hell/dunkel · F Vollbild';
+  ((S.data && S.data.stories || []).length ? ' · S Story' : '') + (hasMarks() ? ' · M Markierungen' : '') + ' · / Suche · T hell/dunkel · F Vollbild';
 /* Begriffe je Art: bei Stationen heissen Ereignisse «Einträge» */
 const V = t => !S.st ? t : t.replace(/Ereignissen/g, 'Einträgen').replace(/Ereignisse/g, 'Einträge').replace(/Ereignis\(se\)/g, 'Eintrag/Einträge')
   .replace(/Ereignis/g, 'Eintrag').replace(/auf den Zeitstrahl/g, 'auf die Achse').replace(/chronologisch/g, 'in Reihenfolge');
@@ -398,7 +413,7 @@ const DEFAULT_CATS = () => [
   { id:'klima', name:'Klima & Umwelt', farbe:PALETTE[5] } ];
 const S = { src:null, data:null, events:[], vis:[], cats:{}, byId:{}, hidden:new Set(), ppd:1, t0:0, tmax:0, pad:0,
             minPpd:.01, maxPpd:90, sel:null, det:null, geo:null, ticksEl:null, gridEl:null, lanes:[],
-            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], st:null, contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null, printW:0 };
+            view:'achse', editing:false, bakDone:false, story:null, bcW:0, bcSlot:1, bcYears:[], st:null, marks:true, markList:[], contentRight:0, dirty:false, zipReady:null, zipVer:0, savedAt:null, printW:0 };
 function reindex(){ S.byId = {}; S.events.forEach(e => S.byId[e.id] = e); }
 const vpW = () => S.printW || $('#viewport').clientWidth || innerWidth || 1024;
 const slug = s => String(s || '').toLowerCase().replace(/\u00e4/g, 'ae').replace(/\u00f6/g, 'oe').replace(/\u00fc/g, 'ue')
@@ -754,7 +769,7 @@ function recomputeSpan(){
 }
 function setData(src, data){
   assetCache.clear(); thumbCache.clear(); iconCache.clear(); iconDone.clear();
-  S.src = src; S.data = data; S.hidden.clear(); S.sel = null; S.det = null; S.bakDone = false; S.story = null; S.search = null; S.noteCache = null; $('#searchbar').hidden = true; $('#q').value = '';
+  S.src = src; S.data = data; S.hidden.clear(); S.marks = true; S.sel = null; S.det = null; S.bakDone = false; S.story = null; S.search = null; S.noteCache = null; $('#searchbar').hidden = true; $('#q').value = '';
   data.kategorien = data.kategorien || []; data.events = data.events || []; data.stories = data.stories || [];
   data.events.forEach(e => { if (!e.id) e.id = uniqueId(slug(e.titel)); });
   try { S.view = localStorage.getItem('zeitstrahl-view:' + src.name) === 'bahnen' ? 'bahnen' : 'achse'; } catch { S.view = 'achse'; }
@@ -914,6 +929,54 @@ function makeBar(e, col, top, dim, BH){
   e.el = b; e.threadX = g.l + Math.min(12, (g.r - g.l) / 2); e.threadY = top + BH / 2;
   return b;
 }
+/* ----- Markierungen: Linien und Bereiche im Hintergrund (von Hand, aus Kategorien mit «Hintergrund», Jahrhundert-Raster) ----- */
+const RASTER = [10, 50, 100];
+const hasMarks = () => !!(S.data && ((S.data.markierungen || []).length || RASTER.includes(Number(S.data.raster)) || (S.data.kategorien || []).some(c => c.hintergrund)));
+function toggleMarks(){ S.marks = !S.marks; layout(); setStatus(S.marks ? 'Markierungen an' : 'Markierungen aus'); }
+function markList(vis){
+  if (!S.marks || !S.data) return [];
+  const out = [], X = (v, end) => { const p = parseDate(v, end); return p && !p.bc ? dayToX(p.day) : null; };
+  for (const m of S.data.markierungen || []){
+    if (m.aktiv === false || (m.ansicht === 'achse' && S.view !== 'achse') || (m.ansicht === 'bahnen' && S.view !== 'bahnen')) continue;
+    let x1, x2 = null;
+    if (S.st){
+      const i = S.st.idx.get(m.von), j = m.art === 'bereich' ? S.st.idx.get(m.bis) : undefined; if (i === undefined) continue;
+      x1 = S.pad + S.st.cum[i] * S.ppd; if (j !== undefined && j >= i) x2 = S.pad + S.st.cum[j + 1] * S.ppd;
+    } else {
+      x1 = X(m.von, false); if (x1 == null) continue;
+      if (m.art === 'bereich' && m.bis){ x2 = X(m.bis, true); if (x2 == null || x2 < x1) continue; }
+    }
+    out.push({ x1, x2, text:m.text || '', color:/^#[0-9a-f]{6}$/i.test(m.farbe || '') ? m.farbe : null, kind:x2 != null ? 'band' : 'line' });
+  }
+  for (const e of vis){
+    const c = S.cats[e.kat]; if (!c || !c.hintergrund) continue;
+    let x1, x2 = null;
+    if (S.st){ const i = e.a.ya, j = e.b ? e.b.ya : i; x1 = S.pad + S.st.cum[i] * S.ppd; x2 = S.pad + S.st.cum[j + 1] * S.ppd; }
+    else { if (isBc(e.pos) || (e.b && isBc(e.b.day))) continue; x1 = dayToX(e.pos); if (e.b) x2 = dayToX(e.b.day); }
+    out.push({ x1, x2, text:e.titel, color:c.farbe, kind:x2 != null ? 'band' : 'line', fromCat:true });
+  }
+  const ras = Number(S.data.raster);
+  if (!S.st && RASTER.includes(ras) && S.ppd * 365.25 * ras >= 56){
+    const y0 = Math.max(1, Math.ceil(civilFromDays(Math.floor(S.t0)).y / ras) * ras), y1 = civilFromDays(Math.ceil(S.tmax)).y;
+    for (let y = y0, n = 0; y <= y1 && n < 400; y += ras, n++) out.push({ x1:dayToX(daysFromCivil(y, 1, 1)), x2:null, text:String(y), color:null, kind:'line', ras:true });
+  }
+  return out;
+}
+function drawMarks(layer, lbl, list, W, H, rem){
+  layer.style.width = W + 'px'; layer.style.height = H + 'px'; lbl.style.width = W + 'px';
+  const rows = [], rowH = 1.05 * rem;
+  for (const m of list.slice().sort((a, b) => a.x1 - b.x1)){
+    const x1 = Math.max(0, m.x1), x2 = m.x2 != null ? Math.min(W, m.x2) : null; if ((x2 != null && x2 < 0) || x1 > W) continue;
+    const d = el('div', 'mk ' + (m.ras ? 'ras' : m.kind)); if (m.color) d.style.setProperty('--c', m.color);
+    d.style.left = x1 + 'px'; if (x2 != null) d.style.width = Math.max(2, x2 - x1) + 'px'; layer.append(d);
+    if (!m.text) continue;
+    const wd = (String(m.text).length * .46 + .7) * rem, room = x2 != null ? x2 - x1 : 1e9;
+    if (m.fromCat && (x2 == null || room < 3.2 * rem)) continue;                                                  // schmale Hintergrundbänder aus Einträgen: kein Text
+    let k = 0; while ((rows[k] ?? -1e9) > x1 + 3) k++; if (k > 2) continue;
+    rows[k] = x1 + 3 + wd;
+    const t = el('span', m.ras ? 'ras' : ''); if (m.color) t.style.setProperty('--c', m.color); t.textContent = m.text; t.style.left = (x1 + 3) + 'px'; t.style.top = (3 + k * rowH) + 'px'; lbl.append(t);
+  }
+}
 function layout(){
   if (!S.data) return;
   const vp = $('#viewport'), st = $('#stage');
@@ -926,6 +989,7 @@ function layout(){
   const W = Math.ceil((S.st ? S.st.tot : S.tmax - S.t0) * S.ppd + 2 * S.pad + S.bcW);
   st.textContent = ''; st.className = (bahn ? 'bahnen ' : '') + (gross ? 'gross' : klein ? 'klein' : ''); S.lanes = []; S.ticksEl = null; S.gridEl = null;
   const frag = document.createDocumentFragment(); let H;
+  const mkLbl = el('div', 'mklbl'), mkLayer = el('div', 'mklayer'); frag.append(mkLbl, mkLayer);
   vis.forEach(e => { e.x = dayToX(e.pos); e._r = null; });
   const BH = 2 * rem, BG = .35 * rem, cardEvs = vis.filter(e => !isBar(e)), barEvs = vis.filter(isBar);
   const vh = S.printW ? 0 : vp.clientHeight;
@@ -1009,6 +1073,8 @@ function layout(){
     }
     if (!groups.length) H = vh;
   }
+  { const mh = Math.max(H, vh); mkLbl.style.top = (bahn ? BAND : 0) + 'px'; S.markList = markList(vis); drawMarks(mkLayer, mkLbl, S.markList, W, mh, rem);
+    $('#mMarks').hidden = !hasMarks(); $('#mMarks').textContent = S.marks ? 'Markierungen ausblenden (M)' : 'Markierungen einblenden (M)'; }
   if (S.story){
     const pts = S.story.ids.map(id => S.byId[id]).filter(e => e && e.threadX != null);
     if (pts.length > 1){
@@ -1449,10 +1515,12 @@ function applyBg(){
 }
 
 /* ========== Einstellungen (Titel, Kategorien) ========== */
-const SET = { cats:[], titel:'', size:'normal', bg:'warm', pal:-1, sts:[], abst:'normal', bm:'gleich', am:4, multi:false, multiText:'' };
+const MKCOL = [['', 'Grau'], ['#c8452f', 'Rot'], ['#2b59c3', 'Blau'], ['#1e7a4f', 'Grün'], ['#9a6a00', 'Ocker'], ['#7b4fb0', 'Violett'], ['#0f8b9a', 'Türkis'], ['#c2185b', 'Magenta']];
+const SET = { mk:[], raster:0, cats:[], titel:'', size:'normal', bg:'warm', pal:-1, sts:[], abst:'normal', bm:'gleich', am:4, multi:false, multiText:'' };
 function openSettings(){
   if (!S.data || !S.src.canWrite){ return; }
   SET.pal = -1; SET.multi = false; SET.multiText = ''; SET.bg = BGCOL[S.data.hintergrund] ? S.data.hintergrund : 'warm'; SET.titel = S.data.titel || ''; SET.size = ['klein', 'gross'].includes(S.data.kartengroesse) ? S.data.kartengroesse : 'normal'; SET.cats = S.data.kategorien.map(c => ({ ...c }));
+  SET.mk = (S.data.markierungen || []).map(m => ({ ...m })); SET.raster = RASTER.includes(Number(S.data.raster)) ? Number(S.data.raster) : 0;
   SET.sts = S.st ? S.data.achse.stationen.map(t => ({ ...t })) : []; SET.abst = S.st && ABSTAND[S.data.achse.abstand] ? S.data.achse.abstand : 'normal';
   SET.bm = S.st && S.data.achse.breitenmodus === 'auto' ? 'auto' : 'gleich'; SET.am = S.st && [2, 4, 6, 8].includes(Number(S.data.achse.autoMax)) ? Number(S.data.achse.autoMax) : 4;
   renderSettings(); $('#settings').hidden = false;
@@ -1475,6 +1543,10 @@ function renderSettings(){
     <div style="margin-top:.6rem"><button class="btn" id="s-stadd">+ Station</button> <button class="btn" id="s-stmulti">+ Mehrere …</button></div>
     ${SET.multi ? `<label>Neue Stationen (eine pro Zeile)</label><textarea id="s-stlines" placeholder="Lernphase 5&#10;Lernphase 6"></textarea><div style="margin-top:.4rem"><button class="btn primary" id="s-stlinesgo">Hinzufügen</button></div>` : ''}
     <div class="hintline">Breite «Standard»: folgt der Einstellung oben (gleichmässig oder wachsend mit der Zahl der Einträge). Eine feste Breite (1×–6×) gilt nur für diese Station. Die Art der Achse lässt sich nach dem Anlegen nicht mehr ändern.</div>` : ''}
+    <label>Markierungen (Linien und Bereiche im Hintergrund)</label><div id="s-mk"></div>
+    <div style="margin-top:.6rem"><button class="btn" id="s-mkadd">+ Markierung</button></div>
+    <div class="hintline">Linie oder Bereich, z.B. «1800» und «1900» als Jahrhundertlinien oder «Zweiter Weltkrieg» von 1939 bis 1945. ${S.st ? 'Bei Stationen wählst du die Station. ' : 'Jahre oder genaue Daten; vor Christus ist noch nicht möglich. '}Das Auge blendet eine einzelne Markierung aus, ohne sie zu löschen; mit «Beide / Achse / Bahnen» erscheint sie nur in einer Ansicht. Die Taste M blendet alle Markierungen ein und aus (auch im PDF). Mit dem Schalter «Hintergrund» bei einer Kategorie werden deren Zeiträume automatisch im Hintergrund markiert.</div>
+    ${S.st ? '' : `<label>Jahrhundertlinien (Raster)</label><div class="seg" id="s-ras" style="width:max-content"><button type="button" data-r="0">Aus</button><button type="button" data-r="100">100 Jahre</button><button type="button" data-r="50">50 Jahre</button><button type="button" data-r="10">10 Jahre</button></div>`}
     <label>Kategorien (höchstens ${MAXCATS}; die Reihenfolge bestimmt die Bahnen)</label><div id="s-cats"></div>
     <div style="margin-top:.6rem"><button class="btn" id="s-add">+ Kategorie</button></div>
     <div class="hintline">Darstellung «Balken»: Die Einträge dieser Kategorie erscheinen als Balken mit Namen in einer eigenen Zone, z.B. Personen als Lebensbalken (Beginn = Geburt, Ende = Tod) oder Figuren eines Buches.</div>
@@ -1516,6 +1588,28 @@ function renderSettings(){
       };
     }
   }
+  document.querySelectorAll('#s-ras button').forEach(b => { b.classList.toggle('on', Number(b.dataset.r) === SET.raster); b.onclick = () => { SET.raster = Number(b.dataset.r); renderSettings(); }; });
+  { const mb = $('#s-mk'), stl = S.st ? SET.sts : [];
+    SET.mk.forEach((m, i) => {
+      const r = el('div', 'catrow'), mkSel = (opts, val, w, cb) => { const x = el('select'); x.style.cssText = `width:${w};flex:none`; opts.forEach(([v, n]) => { const o = el('option'); o.value = v; o.textContent = n; x.append(o); }); x.value = val; x.onchange = () => cb(x.value); return x; };
+      const art = mkSel([['linie', 'Linie'], ['bereich', 'Bereich']], m.art === 'bereich' ? 'bereich' : 'linie', '6.2rem', v => { m.art = v; renderSettings(); });
+      const txt = el('input'); txt.type = 'text'; txt.placeholder = 'Beschriftung (optional)'; txt.value = m.text || ''; txt.setAttribute('enterkeyhint', 'done'); txt.oninput = () => m.text = txt.value;
+      let von, bis;
+      if (S.st){ const o = stl.map(t => [t.id, t.label]); von = mkSel(o, m.von || (stl[0] && stl[0].id) || '', '8rem', v => m.von = v); if (!m.von && stl[0]) m.von = stl[0].id;
+        bis = mkSel(o, m.bis || m.von || '', '8rem', v => m.bis = v); }
+      else { const mk = (ph, val, set) => { const x = el('input'); x.type = 'text'; x.placeholder = ph; x.value = val ? toSwissInput(val) : ''; x.style.cssText = 'width:7rem;flex:none'; x.oninput = () => set(x.value); x.setAttribute('enterkeyhint', 'done'); return x; };
+        von = mk(m.art === 'bereich' ? 'von (z.B. 1939)' : 'Jahr (z.B. 1800)', m.von, v => m.von = v); bis = mk('bis (z.B. 1945)', m.bis, v => m.bis = v); }
+      if (m.art !== 'bereich') bis.style.display = 'none';
+      const col = mkSel(MKCOL, MKCOL.some(c => c[0] === (m.farbe || '')) ? (m.farbe || '') : '', '6rem', v => m.farbe = v || undefined);
+      const rm = el('button', 'mini'); rm.textContent = '✕'; rm.title = 'Entfernen'; rm.onclick = () => { SET.mk.splice(i, 1); renderSettings(); };
+      const eye = el('button', 'mini eye' + (m.aktiv === false ? ' off' : '')); eye.type = 'button'; eye.title = m.aktiv === false ? 'Ausgeblendet (klicken zum Einblenden)' : 'Sichtbar (klicken zum Ausblenden)';
+      eye.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/>' + (m.aktiv === false ? '<path d="M3 3l18 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>' : '') + '</svg>';
+      eye.onclick = () => { if (m.aktiv === false) delete m.aktiv; else m.aktiv = false; renderSettings(); };
+      const ans = mkSel([['', 'Beide'], ['achse', 'Achse'], ['bahnen', 'Bahnen']], m.ansicht === 'achse' || m.ansicht === 'bahnen' ? m.ansicht : '', '5.6rem', v => m.ansicht = v || undefined); ans.title = 'In welcher Ansicht die Markierung erscheint';
+      if (m.aktiv === false) r.style.opacity = '.55';
+      r.append(eye, art, txt, von, bis, col, ans, rm); mb.append(r);
+    });
+    $('#s-mkadd').onclick = () => { SET.mk.push({ id:'', art:'linie', von:S.st && SET.sts[0] ? SET.sts[0].id : '', text:'' }); renderSettings(); const ins = document.querySelectorAll('#s-mk input'); if (ins.length) ins[ins.length - 2].focus(); }; }
   const box = $('#s-cats');
   SET.cats.forEach((c, i) => {
     const blk = el('div'), r = el('div', 'catrow'); const sws = el('div', 'sws');
@@ -1531,7 +1625,9 @@ function renderSettings(){
     const ds = el('select'); ds.style.cssText = 'width:6.4rem;flex:none'; ds.title = 'Darstellung der Einträge dieser Kategorie';
     [['karte', 'Karte'], ['balken', 'Balken']].forEach(([v, n]) => { const o = el('option'); o.value = v; o.textContent = n; ds.append(o); });
     ds.value = c.darstellung === 'balken' ? 'balken' : 'karte'; ds.onchange = () => { if (ds.value === 'balken') c.darstellung = 'balken'; else delete c.darstellung; };
-    r.append(sws, inp, ds, up, dn, rm); blk.append(r);
+    const hg = el('label', 'chk'); hg.style.cssText = 'margin:0;white-space:nowrap;flex:none'; hg.title = 'Zeiträume dieser Kategorie zusätzlich als Streifen im Hintergrund zeigen';
+    const hc = el('input'); hc.type = 'checkbox'; hc.checked = !!c.hintergrund; hc.onchange = () => { if (hc.checked) c.hintergrund = true; else delete c.hintergrund; }; hg.append(hc, 'Hintergrund');
+    r.append(sws, inp, ds, hg, up, dn, rm); blk.append(r);
     if (SET.pal === i){
       const xp = el('div', 'xpal');
       EXTRA.forEach(p => { const b = el('button', 'sw' + (c.farbe === p ? ' on' : '')); b.style.setProperty('--c', p); b.title = p; b.onclick = () => { c.farbe = p; SET.pal = -1; renderSettings(); }; xp.append(b); });
@@ -1547,15 +1643,33 @@ function renderSettings(){
   $('#s-save').onclick = async () => {
     if (SET.cats.some(c => !c.name.trim())) return $('#s-err').textContent = 'Jede Kategorie braucht einen Namen.';
     if (S.st && SET.sts.some(t => !String(t.label).trim())) return $('#s-err').textContent = 'Jede Station braucht eine Beschriftung.';
+    const mks = [], e1 = m => $('#s-err').textContent = 'Markierung' + (m.text ? ' «' + m.text + '»' : '') + ': ';
+    for (const m of SET.mk){
+      const bereich = m.art === 'bereich'; let von = m.von, bis = bereich ? m.bis : undefined;
+      if (S.st){
+        const ix = id => SET.sts.findIndex(t => t.id === id);
+        if (ix(von) < 0) { e1(m); $('#s-err').textContent += 'Station fehlt.'; return; }
+        if (bereich && (ix(bis) < 0 || ix(bis) < ix(von))) { e1(m); $('#s-err').textContent += '«bis» muss gleich oder nach «von» liegen.'; return; }
+      } else {
+        const pv = normDateInput(String(von || '')); if (!pv) { e1(m); $('#s-err').textContent += 'Beginn fehlt oder Format nicht erkannt (z.B. 1939).'; return; }
+        if (parseDate(pv).bc) { e1(m); $('#s-err').textContent += 'Vor Christus ist noch nicht möglich.'; return; }
+        von = pv;
+        if (bereich){ const pb = normDateInput(String(bis || '')); if (!pb) { e1(m); $('#s-err').textContent += 'Ende fehlt oder Format nicht erkannt (z.B. 1945).'; return; }
+          if (parseDate(pb).bc || parseDate(pb, true).day < parseDate(pv).day) { e1(m); $('#s-err').textContent += 'Ende liegt vor dem Beginn.'; return; } bis = pb; }
+      }
+      mks.push({ id: m.id || 'm' + (mks.length + 1) + '-' + Date.now().toString(36).slice(-3), art: bereich ? 'bereich' : 'linie', von, ...(bereich ? { bis } : {}), ...(String(m.text || '').trim() ? { text:String(m.text).trim() } : {}), ...(m.farbe ? { farbe:m.farbe } : {}), ...(m.aktiv === false ? { aktiv:false } : {}), ...(m.ansicht === 'achse' || m.ansicht === 'bahnen' ? { ansicht:m.ansicht } : {}) });
+    }
     const ids = new Set(SET.cats.map(c => c.id).filter(Boolean)); const out = [];
     for (const c of SET.cats){
       let id = c.id; if (!id){ let b = slug(c.name) || 'kategorie', n = 2; id = b; while (ids.has(id)) id = `${b}-${n++}`; ids.add(id); }
-      out.push({ id, name: c.name.trim(), farbe: c.farbe, ...(c.darstellung === 'balken' ? { darstellung:'balken' } : {}) });
+      out.push({ id, name: c.name.trim(), farbe: c.farbe, ...(c.darstellung === 'balken' ? { darstellung:'balken' } : {}), ...(c.hintergrund ? { hintergrund:true } : {}) });
     }
     S.data.titel = SET.titel.trim() || S.src.name; S.data.kategorien = out;
     if (SET.size !== 'normal') S.data.kartengroesse = SET.size; else delete S.data.kartengroesse;
     if (SET.bg !== 'warm') S.data.hintergrund = SET.bg; else delete S.data.hintergrund;
     applyBg();
+    if (mks.length) S.data.markierungen = mks; else delete S.data.markierungen;
+    if (!S.st && SET.raster) S.data.raster = SET.raster; else delete S.data.raster;
     let abChanged = false;
     if (S.st){
       abChanged = (S.data.achse.abstand || 'normal') !== SET.abst;
@@ -2066,6 +2180,7 @@ function showStart(){
 $('#mFolder').onclick = showStart;
 $('#mSettings').onclick = () => { $('#menu').hidden = true; openSettings(); };
 $('#mStories').onclick = () => { $('#menu').hidden = true; openStories(); };
+$('#mMarks').onclick = () => { $('#menu').hidden = true; toggleMarks(); };
 $('#mExport').onclick = () => { $('#menu').hidden = true; exportZip(); };
 $('#mWeb').onclick = () => { $('#menu').hidden = true; openWebDialog(); };
 $('#mPdf').onclick = () => { $('#menu').hidden = true; openPdfDialog('a4'); };
@@ -2091,6 +2206,7 @@ document.addEventListener('keydown', ev => {
   const k = ev.key, vp = $('#viewport');
   if (k === 'Escape'){ if (!$('#menu').hidden) $('#menu').hidden = true; else if (S.det) closeDetail(); else if (S.search || !$('#searchbar').hidden) closeSearch(); else select(null, false); }
   else if (k === '/' && !S.det){ ev.preventDefault(); openSearch(); }
+  else if ((k === 'm' || k === 'M') && hasMarks()){ ev.preventDefault(); toggleMarks(); }
   else if (k === 'ArrowRight' || k === 'ArrowLeft'){ ev.preventDefault(); step(k === 'ArrowRight' ? 1 : -1); if (S.det && S.sel) openDetail(S.sel); }
   else if (k === 'Enter' && S.sel && !S.det){ ev.preventDefault(); openDetail(S.sel); }
   else if ((k === 'e' || k === 'E') && S.editing && S.sel){ ev.preventDefault(); openEditor(S.sel); }
@@ -2372,6 +2488,7 @@ $('#dirInput').onchange = ev => { const f = [...ev.target.files]; if (f.length) 
 $('#btnOpen').onclick = openFolder;
 $('#btnDemo').onclick = () => loadFrom(new DemoSource(DEMO));
 $('#btnDemo2').onclick = () => loadFrom(new DemoSource(DEMO2));
+$('#btnDemo3').onclick = () => loadFrom(new DemoSource(DEMO3));
 $('#btnZip').onclick = () => $('#zipInput').click();
 $('#zipInput').onchange = ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) openZipFile(f); };
 $('#btnNew').onclick = startNew;
@@ -2403,6 +2520,7 @@ $('#btnNew').onclick = startNew;
 
 /*DEMO_START*/const DEMO = {"data": {"titel": "Wirtschaftsgeschichte (Beispiel)", "kategorien": [{"id": "handel", "name": "Handel & Geld", "farbe": "#1e7a4f"}, {"id": "produktion", "name": "Produktion & Technik", "farbe": "#9a6a00"}, {"id": "krisen", "name": "Krisen & Katastrophen", "farbe": "#c8452f"}, {"id": "ideen", "name": "Ideen & Theorien", "farbe": "#2b59c3"}, {"id": "personen", "name": "Denker & Personen", "farbe": "#7b4fb0", "darstellung": "balken"}, {"id": "staat", "name": "Staat & Politik", "farbe": "#0f8b9a"}, {"id": "krieg", "name": "Krieg & Konflikt", "farbe": "#c2185b"}], "events": [{"id": "hoechstpreisedikt-0301", "datum": "0301", "titel": "Höchstpreisedikt Diokletians", "kategorie": "staat", "beschreibung": "Der Kaiser legt Höchstpreise und Löhne fest, um die Inflation zu stoppen. Es scheitert weitgehend."}, {"id": "muenzreform-0794", "datum": "0794", "titel": "Karolingische Münzreform", "kategorie": "handel", "beschreibung": "Karl der Grosse führt den Silberdenar als einheitliche Münze ein; er bleibt über Jahrhunderte Grundlage des Geldsystems. Datierung ungefähr."}, {"id": "ackerbau-v10000", "datum": "10000 v. Chr.", "titel": "Beginn von Ackerbau und Viehzucht", "kategorie": "produktion", "beschreibung": "Neolithische Revolution: Menschen werden sesshaft und erzeugen erstmals Überschüsse. Zeitangabe ungefähr, je nach Region später."}, {"id": "laterankonzil-1139", "datum": "1139", "titel": "Zweites Laterankonzil verbietet Wucher", "kategorie": "staat", "beschreibung": "Die Kirche untersagt das Zinsnehmen. Das prägt das mittelalterliche Denken über Geld und Kredit."}, {"id": "champagne-messen-1150", "datum": "1150", "ende": "1300", "titel": "Champagne-Messen", "kategorie": "handel", "beschreibung": "Grosse Handelsmessen in Nordfrankreich verbinden Nord- und Südeuropa; sie blühen bis etwa 1300."}, {"id": "liber-abaci-1202", "datum": "1202", "titel": "Fibonacci: Liber Abaci", "kategorie": "ideen", "beschreibung": "Leonardo von Pisa bringt die indisch-arabischen Ziffern und praktisches Rechnen für Kaufleute nach Europa."}, {"id": "aquin-1225", "datum": "1225", "ende": "1274", "titel": "Thomas von Aquin", "kategorie": "personen", "beschreibung": "Scholastiker; denkt über den «gerechten Preis» und das Zinsverbot nach."}, {"id": "hanse-1241", "datum": "1241", "titel": "Lübeck und Hamburg schliessen ein Bündnis", "kategorie": "handel", "beschreibung": "Gilt als Beginn der Hanse, eines Städtebundes des Fernhandels im Nord- und Ostseeraum."}, {"id": "florin-1252", "datum": "1252", "titel": "Der Florentiner Gulden (Florin)", "kategorie": "handel", "beschreibung": "Florenz prägt eine Goldmünze, die im europäischen Fernhandel zum Massstab wird."}, {"id": "seidenstrasse-v130", "datum": "130 v. Chr.", "titel": "Die Seidenstrasse verbindet China und den Mittelmeerraum", "kategorie": "handel", "beschreibung": "Fernhandelsrouten über Land und See; Seide, Gewürze und Silber wechseln den Besitzer. Datierung ungefähr."}, {"id": "schwarzer-tod-1347", "datum": "1347", "ende": "1351", "titel": "Der Schwarze Tod", "kategorie": "krisen", "beschreibung": "Die Pest rafft in Europa einen grossen Teil der Bevölkerung dahin. Arbeitskräfte werden knapp, Löhne steigen."}, {"id": "medici-bank-1397", "datum": "1397", "titel": "Gründung der Medici-Bank", "kategorie": "handel", "beschreibung": "In Florenz entsteht eine der einflussreichsten Banken des Mittelalters."}, {"id": "kolumbus-1492", "datum": "1492-10-12", "titel": "Kolumbus erreicht Amerika", "kategorie": "handel", "beschreibung": "Beginn der europäischen Expansion; Silber, Zucker und der Handel über den Atlantik verändern die Weltwirtschaft."}, {"id": "pacioli-1494", "datum": "1494", "titel": "Pacioli beschreibt die doppelte Buchführung", "kategorie": "ideen", "beschreibung": "Luca Pacioli veröffentlicht die Summa de arithmetica; die Methode ist unter Kaufleuten schon länger üblich."}, {"id": "fugger-1519", "datum": "1519", "titel": "Fugger finanzieren die Wahl Karls V.", "kategorie": "handel", "beschreibung": "Das Augsburger Bankhaus leiht grosse Summen für die Königswahl."}, {"id": "voc-1602", "datum": "1602", "titel": "Gründung der Ostindien-Kompanie (VOC)", "kategorie": "handel", "beschreibung": "Gilt als erste Aktiengesellschaft mit handelbaren Anteilen."}, {"id": "dreissigjaehriger-krieg-1618", "datum": "1618", "ende": "1648", "titel": "Dreissigjähriger Krieg", "kategorie": "krieg", "beschreibung": "Verwüstet weite Teile Mitteleuropas; Bevölkerung, Handel und Landwirtschaft brechen ein."}, {"id": "tulpenmanie-1637", "datum": "1637-02", "titel": "Tulpenmanie", "kategorie": "krisen", "beschreibung": "Preise für Tulpenzwiebeln brechen nach einem Spekulationsrausch in den Niederlanden ein. Das Ausmass ist in der Forschung umstritten."}, {"id": "bank-of-england-1694", "datum": "1694", "titel": "Gründung der Bank of England", "kategorie": "handel", "beschreibung": "Sie finanziert den Staat und wird später zur Zentralbank."}, {"id": "suedseeblase-1720", "datum": "1720", "titel": "Südsee- und Mississippi-Blase", "kategorie": "krisen", "beschreibung": "Spekulationsblasen in England und Frankreich platzen."}, {"id": "smith-1723", "datum": "1723", "ende": "1790", "titel": "Adam Smith", "kategorie": "personen", "beschreibung": "Schottischer Moralphilosoph; gilt als Begründer der klassischen Nationalökonomie."}, {"id": "hammurabi-v1754", "datum": "1754 v. Chr.", "titel": "Codex Hammurabi", "kategorie": "staat", "beschreibung": "Babylonisches Gesetzeswerk mit Regeln zu Preisen, Löhnen, Schulden und Haftung. Datierung ungefähr."}, {"id": "industrielle-revolution-1760", "datum": "1760", "ende": "1840", "titel": "Industrielle Revolution", "kategorie": "produktion", "beschreibung": "Dampfmaschine, Fabrik und Lohnarbeit verändern Produktion und Gesellschaft, zuerst in England. Die Grenzen der Epoche sind Konvention."}, {"id": "wealth-of-nations-1776", "datum": "1776-03", "titel": "«Der Wohlstand der Nationen»", "kategorie": "ideen", "beschreibung": "Adam Smith beschreibt Arbeitsteilung und die «unsichtbare Hand» des Marktes."}, {"id": "kontinentalsperre-1806", "datum": "1806-11", "titel": "Napoleons Kontinentalsperre", "kategorie": "krieg", "beschreibung": "Napoleon verbietet den Handel mit Grossbritannien auf dem Festland; der Wirtschaftskrieg verändert Handelsrouten und Preise."}, {"id": "ricardo-1817", "datum": "1817", "titel": "Ricardo: Komparative Vorteile", "kategorie": "ideen", "beschreibung": "David Ricardo begründet die Idee, dass Handel auch dann nützt, wenn ein Land alles billiger herstellen kann."}, {"id": "marx-1818", "datum": "1818", "ende": "1883", "titel": "Karl Marx", "kategorie": "personen", "beschreibung": "Kritiker der politischen Ökonomie; analysiert Kapital, Mehrwert und Klassen."}, {"id": "opiumkrieg-1839", "datum": "1839", "ende": "1842", "titel": "Erster Opiumkrieg", "kategorie": "krieg", "beschreibung": "Grossbritannien erzwingt mit Waffengewalt den Handel mit Opium und öffnet China für den Aussenhandel."}, {"id": "manifest-1848", "datum": "1848-02", "titel": "Kommunistisches Manifest", "kategorie": "ideen", "beschreibung": "Marx und Engels veröffentlichen ihre Streitschrift."}, {"id": "buergerkrieg-1861", "datum": "1861", "ende": "1865", "titel": "Amerikanischer Bürgerkrieg", "kategorie": "krieg", "beschreibung": "Streit um die Sklaverei, auf der die Baumwollwirtschaft des Südens beruht; Nord und Süd haben unterschiedliche Wirtschaftsweisen."}, {"id": "kapital-1867", "datum": "1867", "titel": "Marx: Das Kapital, Band 1", "kategorie": "ideen", "beschreibung": "Analyse der kapitalistischen Produktionsweise."}, {"id": "marginalismus-1871", "datum": "1871", "ende": "1874", "titel": "Marginalistische Revolution", "kategorie": "ideen", "beschreibung": "Jevons, Menger und Walras erklären den Wert aus dem Nutzen am Rand (Grenznutzen)."}, {"id": "lange-depression-1873", "datum": "1873", "ende": "1896", "titel": "Lange Depression", "kategorie": "krisen", "beschreibung": "Nach dem Börsenkrach von 1873 folgen Jahre fallender Preise und schwachen Wachstums. Die Dauer ist in der Forschung nicht einheitlich."}, {"id": "keynes-1883", "datum": "1883", "ende": "1946", "titel": "John Maynard Keynes", "kategorie": "personen", "beschreibung": "Britischer Ökonom; begründet die Idee, dass der Staat in Krisen die Nachfrage stützen soll."}, {"id": "hayek-1899", "datum": "1899", "ende": "1992", "titel": "Friedrich August von Hayek", "kategorie": "personen", "beschreibung": "Österreichischer Ökonom; Wortführer der liberalen Gegenposition zu Keynes."}, {"id": "friedman-1912", "datum": "1912", "ende": "2006", "titel": "Milton Friedman", "kategorie": "personen", "beschreibung": "US-Ökonom; prägt den Monetarismus und die Politik des freien Marktes."}, {"id": "weltkrieg1-1914", "datum": "1914-07-28", "ende": "1918-11-11", "titel": "Erster Weltkrieg", "kategorie": "krieg", "beschreibung": "Kriegswirtschaft, Staatsschulden und Inflation prägen die Nachkriegszeit."}, {"id": "hyperinflation-1923", "datum": "1923", "titel": "Hyperinflation in Deutschland", "kategorie": "krisen", "beschreibung": "Das Geld verliert in wenigen Monaten fast vollständig seinen Wert; die Rentenmark beendet sie im November."}, {"id": "weltwirtschaftskrise-1929", "datum": "1929", "ende": "1939", "titel": "Weltwirtschaftskrise", "kategorie": "krisen", "beschreibung": "Massenarbeitslosigkeit, Bankenpleiten und Protektionismus."}, {"id": "crash-1929", "datum": "1929-10-24", "titel": "Börsencrash an der Wall Street", "kategorie": "krisen", "beschreibung": "Der «Schwarze Donnerstag» leitet die Weltwirtschaftskrise ein."}, {"id": "general-theory-1936", "datum": "1936", "titel": "Keynes: Allgemeine Theorie", "kategorie": "ideen", "beschreibung": "Erklärt Arbeitslosigkeit mit fehlender Nachfrage."}, {"id": "weltkrieg2-1939", "datum": "1939-09-01", "ende": "1945-09-02", "titel": "Zweiter Weltkrieg", "kategorie": "krieg", "beschreibung": "Totale Kriegswirtschaft, Zwangsarbeit und Zerstörung. Am Ende steht eine Neuordnung der Weltwirtschaft (Bretton Woods, Marshallplan)."}, {"id": "bretton-woods-1944", "datum": "1944-07", "ende": "1971-08", "titel": "Bretton-Woods-System", "kategorie": "handel", "beschreibung": "Feste Wechselkurse mit dem Dollar als Leitwährung; endet, als die USA die Goldbindung aufheben."}, {"id": "marshallplan-1948", "datum": "1948-04", "titel": "Marshallplan", "kategorie": "staat", "beschreibung": "Die USA unterstützen den Wiederaufbau Westeuropas."}, {"id": "evg-1957", "datum": "1957-03-25", "titel": "Römische Verträge", "kategorie": "staat", "beschreibung": "Gründung der Europäischen Wirtschaftsgemeinschaft (EWG)."}, {"id": "oelkrise-1973", "datum": "1973-10", "titel": "Erste Ölpreiskrise", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Angebot, der Ölpreis vervielfacht sich."}, {"id": "thatcher-1979", "datum": "1979-05-04", "titel": "Margaret Thatcher wird Premierministerin", "kategorie": "staat", "beschreibung": "Beginn von Privatisierungen und Deregulierung in Grossbritannien; Auftakt der neoliberalen Wende."}, {"id": "ende-planwirtschaft-1989", "datum": "1989-11-09", "ende": "1991-12-26", "titel": "Ende der Planwirtschaft in Osteuropa", "kategorie": "staat", "beschreibung": "Von der Öffnung der Berliner Mauer bis zur Auflösung der Sowjetunion."}, {"id": "euro-1999", "datum": "1999-01-01", "titel": "Einführung des Euro (Buchgeld)", "kategorie": "handel", "beschreibung": "Elf Staaten führen die gemeinsame Währung ein; das Bargeld folgt 2002."}, {"id": "china-wto-2001", "datum": "2001-12-11", "titel": "China tritt der WTO bei", "kategorie": "handel", "beschreibung": "Chinas Aufstieg zur Werkbank der Welt beschleunigt sich."}, {"id": "lehman-2008", "datum": "2008-09-15", "titel": "Lehman Brothers geht pleite", "kategorie": "krisen", "beschreibung": "Auslöser der globalen Finanzkrise; Staaten retten zahlreiche Banken."}, {"id": "covid-2020", "datum": "2020-03-11", "ende": "2023-05-05", "titel": "Covid-19-Pandemie", "kategorie": "krisen", "beschreibung": "Lieferketten, Lockdowns und Staatshilfen prägen die Wirtschaft."}, {"id": "inflation-2022", "datum": "2022", "titel": "Inflationsschub und Zinswende", "kategorie": "krisen", "beschreibung": "Die Preise steigen weltweit stark, die Zentralbanken erhöhen die Zinsen."}, {"id": "ukraine-2022", "datum": "2022-02-24", "ende": "heute", "titel": "Krieg in der Ukraine", "kategorie": "krieg", "beschreibung": "Sanktionen, Energiepreise und Fluchtbewegungen prägen die Weltwirtschaft."}, {"id": "chatgpt-2022", "datum": "2022-11-30", "ende": "heute", "titel": "Generative KI (ChatGPT)", "kategorie": "produktion", "beschreibung": "Textmaschinen verbreiten sich schnell; offen ist, wie sie Arbeit und Produktivität verändern."}, {"id": "zoelle-2025", "datum": "2025-04-02", "titel": "US-Zölle («Liberation Day»)", "kategorie": "staat", "beschreibung": "Die US-Regierung kündigt umfassende Importzölle an."}, {"id": "kaiserreich-v27", "datum": "27 v. Chr.", "ende": "0476", "titel": "Römisches Kaiserreich (Westen)", "kategorie": "staat", "beschreibung": "Augustus wird erster Kaiser; Strassen, Münzgeld und Seewege verbinden den Mittelmeerraum zu einem grossen Wirtschaftsraum. Das Westreich endet 476."}, {"id": "keilschrift-v3300", "datum": "3300 v. Chr.", "titel": "Keilschrift in Uruk", "kategorie": "handel", "beschreibung": "Eine der frühesten Schriften entsteht in Mesopotamien, zunächst für Buchhaltung: Waren, Rationen, Abgaben. Zeitangabe ungefähr."}, {"id": "aristoteles-v384", "datum": "384 v. Chr.", "ende": "322 v. Chr.", "titel": "Aristoteles", "kategorie": "personen", "beschreibung": "Unterscheidet Gebrauchs- und Tauschwert und denkt über Hausverwaltung (Oikonomia) und Geld nach."}, {"id": "solon-v594", "datum": "594 v. Chr.", "titel": "Solons Schuldenerlass in Athen", "kategorie": "staat", "beschreibung": "Solon schafft die Schuldknechtschaft ab (Seisachtheia). Datierung ungefähr."}, {"id": "muenzen-lydien-v600", "datum": "600 v. Chr.", "titel": "Erste Münzen in Lydien", "kategorie": "handel", "beschreibung": "Geprägte Münzen aus Elektron erleichtern den Handel. Zeitangabe ungefähr."}], "stories": [{"id": "geld-und-banken", "name": "Geld und Banken", "events": ["muenzen-lydien-v600", "muenzreform-0794", "florin-1252", "medici-bank-1397", "bank-of-england-1694", "bretton-woods-1944", "euro-1999", "lehman-2008"]}, {"id": "krisen", "name": "Krisen und Crashs", "events": ["schwarzer-tod-1347", "tulpenmanie-1637", "suedseeblase-1720", "lange-depression-1873", "hyperinflation-1923", "crash-1929", "oelkrise-1973", "lehman-2008", "covid-2020"]}], "appVersion": "1.8"}, "notes": {}};/*DEMO_END*/
 /*DEMO2_START*/const DEMO2 = {"data": {"titel": "Der Process (Beispiel für ein Buch)", "kategorien": [{"id": "handlung", "name": "Handlung", "farbe": "#2b59c3"}, {"id": "personen", "name": "Personen", "farbe": "#7b4fb0", "darstellung": "balken"}, {"id": "orte", "name": "Orte", "farbe": "#1e7a4f"}, {"id": "motive", "name": "Motive und Deutung", "farbe": "#9a6a00"}], "achse": {"art": "stationen", "einheit": "Kapitel", "abstand": "normal", "stationen": [{"id": "s1", "label": "Kapitel 1"}, {"id": "s2", "label": "Kapitel 2"}, {"id": "s3", "label": "Kapitel 3"}, {"id": "s4", "label": "Kapitel 4"}, {"id": "s5", "label": "Kapitel 5"}, {"id": "s6", "label": "Kapitel 6"}, {"id": "s7", "label": "Kapitel 7"}, {"id": "s8", "label": "Kapitel 8"}, {"id": "s9", "label": "Kapitel 9"}, {"id": "s10", "label": "Kapitel 10"}], "breitenmodus": "auto"}, "events": [{"id": "verhaftung", "titel": "Verhaftung am Morgen", "station": "s1", "kategorie": "handlung", "beschreibung": "Josef K. wird an seinem 30. Geburtstag in seinem Zimmer verhaftet. Eine Anklage nennt ihm niemand.", "notiz": "notizen/verhaftung.md"}, {"id": "josef-k", "titel": "Josef K.", "station": "s1", "kategorie": "personen", "beschreibung": "Prokurist in einer Bank, Hauptfigur. Er hält sich für einen ordentlichen Menschen und will sich rechtfertigen.", "notiz": "notizen/josef-k.md", "stationEnde": "s10"}, {"id": "waechter", "titel": "Die Wächter Franz und Willem", "station": "s1", "kategorie": "personen", "beschreibung": "Die beiden Männer, die K. festhalten. Sie wissen selbst wenig über das Verfahren."}, {"id": "grubach-buerstner", "titel": "Frau Grubach und Fräulein Bürstner", "station": "s1", "kategorie": "personen", "beschreibung": "Vermieterin und Nachbarin: K. verteidigt vor ihnen seine Unschuld."}, {"id": "schuld-ohne-anklage", "titel": "Schuld ohne Anklage", "station": "s1", "kategorie": "motive", "beschreibung": "Das zentrale Motiv: K. wird verfolgt, ohne zu wissen, wessen er beschuldigt wird.", "notiz": "notizen/schuld-ohne-anklage.md"}, {"id": "verfahren-laeuft", "titel": "Das Verfahren läuft weiter", "station": "s2", "kategorie": "motive", "beschreibung": "Über die ganze Handlung hinweg bleibt unklar, wer anklagt und nach welchen Regeln entschieden wird.", "stationEnde": "s9"}, {"id": "erste-untersuchung", "titel": "Erste Untersuchung", "station": "s2", "kategorie": "handlung", "beschreibung": "K. wird an einem Sonntag in ein Gerichtsgebäude in der Vorstadt bestellt und hält eine Rede gegen das Verfahren."}, {"id": "gerichtsgebaeude", "titel": "Das Gerichtsgebäude in der Vorstadt", "station": "s2", "kategorie": "orte", "beschreibung": "Ein Gericht in Mietshäusern und Dachböden, nicht in Palästen: Das Recht wirkt unscheinbar und allgegenwärtig."}, {"id": "sitzungssaal", "titel": "Im leeren Sitzungssaal", "station": "s3", "kategorie": "handlung", "beschreibung": "Am nächsten Sonntag findet K. keine Verhandlung vor, sondern nur den leeren Saal."}, {"id": "student-waschfrau", "titel": "Der Student und die Waschfrau", "station": "s3", "kategorie": "personen", "beschreibung": "Die Frau des Gerichtsdieners wird von einem Studenten bedrängt und weggetragen. Auch hier verwischen sich Recht und Willkür."}, {"id": "kanzleien", "titel": "Die Kanzleien", "station": "s3", "kategorie": "orte", "beschreibung": "Enge Räume mit schlechter Luft: K. wird schwindlig. Das Gericht macht ihn körperlich krank."}, {"id": "freundin", "titel": "Die Freundin von Fräulein Bürstner", "station": "s4", "kategorie": "handlung", "beschreibung": "K. sucht das Gespräch mit Fräulein Bürstner. Es kommt nicht so zustande, wie er es sich vorstellt."}, {"id": "pruegler", "titel": "Der Prügler", "station": "s5", "kategorie": "handlung", "beschreibung": "In einer Rumpelkammer der Bank findet K. die beiden Wächter, die wegen seiner Beschwerde bestraft werden."}, {"id": "hilfe-suchen", "titel": "K. sucht Hilfe", "station": "s6", "kategorie": "handlung", "beschreibung": "Onkel, Advokat, Fabrikant und Maler: K. versucht, sein Verfahren auf eigene Faust und mit fremder Hilfe zu steuern.", "stationEnde": "s8"}, {"id": "onkel", "titel": "Der Onkel", "station": "s6", "kategorie": "personen", "beschreibung": "Ein Verwandter vom Land, der K. zum Advokaten Huld bringt, aus Sorge um die Familienehre."}, {"id": "leni", "titel": "Leni", "station": "s6", "kategorie": "personen", "beschreibung": "Pflegerin im Haushalt des Advokaten. Sie ist freundlich zu K., doch auch sie gehört zum Umfeld des Gerichts.", "stationEnde": "s8"}, {"id": "advokat-huld", "titel": "Advokat Huld", "station": "s7", "kategorie": "personen", "beschreibung": "Krank, einflussreich und langsam. Er verspricht viel, tut aber wenig.", "stationEnde": "s8"}, {"id": "titorelli", "titel": "Der Maler Titorelli", "station": "s7", "kategorie": "personen", "beschreibung": "Gerichtsmaler mit Verbindungen zum Gericht. Er erklärt K., welche Ausgänge des Verfahrens möglich sind."}, {"id": "drei-wege", "titel": "Drei Auswege", "station": "s7", "kategorie": "motive", "beschreibung": "Titorelli beschreibt: wirkliche Freisprechung, scheinbare Freisprechung, Verschleppung. Für K. bleibt am Ende nur noch die Verschleppung.", "notiz": "notizen/drei-wege.md"}, {"id": "block", "titel": "Der Kaufmann Block", "station": "s8", "kategorie": "personen", "beschreibung": "Ein anderer Angeklagter, der sich dem Advokaten völlig unterwirft. K. sieht in ihm, wie er selbst enden könnte."}, {"id": "entlassung-advokat", "titel": "K. entlässt den Advokaten", "station": "s8", "kategorie": "handlung", "beschreibung": "K. will sein Verfahren selbst in die Hand nehmen und kündigt Huld."}, {"id": "dom", "titel": "Der Dom", "station": "s9", "kategorie": "orte", "beschreibung": "K. soll einem italienischen Geschäftsfreund die Stadt zeigen und trifft im Dom auf den Gefängniskaplan."}, {"id": "kaplan", "titel": "Der Gefängniskaplan", "station": "s9", "kategorie": "personen", "beschreibung": "Der Geistliche gehört zum Gericht und erzählt K. eine Parabel."}, {"id": "vor-dem-gesetz", "titel": "Vor dem Gesetz", "station": "s9", "kategorie": "motive", "beschreibung": "Die Türhüter-Legende: Ein Mann wartet sein Leben lang vor einer Tür, die nur für ihn bestimmt war. Die Deutungen der Szene sind bis heute offen.", "notiz": "notizen/vor-dem-gesetz.md"}, {"id": "ende", "titel": "Das Ende", "station": "s10", "kategorie": "handlung", "beschreibung": "Am Vorabend seines 31. Geburtstags wird K. von zwei Männern abgeholt und in einem Steinbruch getötet.", "notiz": "notizen/ende.md"}, {"id": "steinbruch", "titel": "Der Steinbruch", "station": "s10", "kategorie": "orte", "beschreibung": "Der Ort der Hinrichtung am Stadtrand. Der Roman bricht hier ab."}], "stories": [{"id": "hilfe", "name": "Wer kann K. helfen?", "events": ["onkel", "advokat-huld", "titorelli", "drei-wege", "block", "entlassung-advokat", "kaplan"]}], "appVersion": "1.9.1"}, "notes": {"notizen/schuld-ohne-anklage.md": "# Schuld ohne Anklage\n\nDas Verfahren kennt keine Anklageschrift. Wer sich verteidigen will, muss zuerst herausfinden, wessen er beschuldigt wird. Das macht jede Verteidigung unmöglich.\n\n**Deutungsansätze**\n\n- *Gesellschaftlich:* Eine anonyme Bürokratie hat Macht über Menschen, ohne sich zu erklären.\n- *Existenziell:* Schuld als Grundzustand, den der Mensch nicht abstreifen kann.\n- *Psychologisch:* K.s Schuld liegt in seiner Selbstgerechtigkeit.\n\nAlle drei Deutungen lassen sich am Text belegen. Das ist die Stärke der Erzählung.\n", "notizen/josef-k.md": "# Josef K.\n\nProkurist in einer Bank, ordentlich, ehrgeizig, mit festen Gewohnheiten. Seine Verhaftung stört genau diese Ordnung.\n\n**Entwicklung**\n\nZu Beginn glaubt K., ein Irrtum werde sich aufklären. Mit der Zeit dreht sich sein ganzes Leben um das Verfahren. Arbeit und Beziehungen treten zurück.\n\n**Frage:** Ist K. schuldig? Der Text gibt keine eindeutige Antwort, bietet aber Hinweise auf beide Lesarten.\n", "notizen/vor-dem-gesetz.md": "# Vor dem Gesetz\n\nDie Parabel steht im Dom. Ein Mann vom Land will durch eine Tür zum Gesetz. Der Türhüter lässt ihn nicht ein, noch nicht. Der Mann wartet Jahre, bis er stirbt. Dann erfährt er, dass die Tür nur für ihn bestimmt war.\n\n**Gespräch im Dom:** K. und der Geistliche streiten über die Deutung. Sie sind sich nicht einig, ob der Türhüter getäuscht hat oder getäuscht wurde.\n\n**Fragen**\n\n1. Was sagt die Parabel über K.s eigene Lage?\n2. Warum lässt Kafka die Deutung offen?\n", "notizen/drei-wege.md": "# Drei Auswege\n\nDer Maler Titorelli beschreibt K. die Möglichkeiten, aus dem Verfahren herauszukommen:\n\n| Weg | Wirkung |\n|---|---|\n| Wirkliche Freisprechung | Das Verfahren ist beendet. Titorelli sagt, er kenne keinen solchen Fall. |\n| Scheinbare Freisprechung | Das Verfahren ruht, kann aber jederzeit wieder aufgenommen werden. |\n| Verschleppung | Das Verfahren wird in den unteren Stufen gehalten und nie entschieden. |\n\n**Aufgabe:** Welchen Weg wählt K. in der Folge, und wie bewertet er die Lage?\n", "notizen/ende.md": "# Das Ende\n\nAm Abend vor seinem 31. Geburtstag holen zwei Männer K. ab. Er geht ohne grossen Widerstand mit, fast wie jemand, der erwartet hat, abgeholt zu werden.\n\nIm Steinbruch wird er getötet. Der letzte Gedanke des Romans gilt der Scham.\n\n**Zum Vergleich:** Der erste Satz spricht von einem Morgen, der letzte Teil spielt am Abend. Welche Rolle spielt diese Klammer für die Lesart?\n", "notizen/verhaftung.md": "# Verhaftung am Morgen\n\nDer Roman beginnt mit dem Satz, dass jemand Josef K. verleumdet haben müsse, denn ohne dass er etwas Böses getan hätte, wurde er eines Morgens verhaftet.\n\n**Was auffällt**\n\n- K. wird in seiner Wohnung festgenommen und nicht abgeführt. Er darf in die Bank gehen.\n- Der Grund der Verhaftung wird nicht genannt.\n- K. versucht sofort, sich zu rechtfertigen, und merkt nicht, dass er damit das Verfahren ernst nimmt.\n\n**Fragen für den Unterricht**\n\n1. Warum wehrt sich K. nicht stärker?\n2. Welche Wirkung hat es, dass das Verfahren zuerst so harmlos wirkt?\n"}};/*DEMO2_END*/
+/*DEMO3_START*/const DEMO3 = {"data": {"titel": "Rezessionen und Wirtschaftskrisen (Beispiel)", "kategorien": [{"id": "krisen", "name": "Krisen und Crashs", "farbe": "#c8452f"}, {"id": "geld", "name": "Geld und Notenbanken", "farbe": "#1e7a4f"}, {"id": "politik", "name": "Politik und Ideen", "farbe": "#2b59c3"}], "raster": 100, "markierungen": [{"id": "r1", "art": "bereich", "von": "1873-10", "bis": "1879-03", "text": "1873–79"}, {"id": "r2", "art": "bereich", "von": "1893-01", "bis": "1894-06", "text": "1893–94"}, {"id": "r3", "art": "bereich", "von": "1907-05", "bis": "1908-06", "text": "1907–08"}, {"id": "r4", "art": "bereich", "von": "1920-01", "bis": "1921-07", "text": "1920–21"}, {"id": "r5", "art": "bereich", "von": "1929-08", "bis": "1933-03", "text": "Grosse Depression 1929–33", "farbe": "#c8452f"}, {"id": "r6", "art": "bereich", "von": "1937-05", "bis": "1938-06", "text": "1937–38"}, {"id": "r7", "art": "bereich", "von": "1973-11", "bis": "1975-03", "text": "1973–75"}, {"id": "r8", "art": "bereich", "von": "1980-01", "bis": "1980-07", "text": "1980"}, {"id": "r9", "art": "bereich", "von": "1981-07", "bis": "1982-11", "text": "1981–82"}, {"id": "r10", "art": "bereich", "von": "1990-07", "bis": "1991-03", "text": "1990–91"}, {"id": "r11", "art": "bereich", "von": "2001-03", "bis": "2001-11", "text": "2001"}, {"id": "r12", "art": "bereich", "von": "2007-12", "bis": "2009-06", "text": "2007–09"}, {"id": "r13", "art": "bereich", "von": "2020-02", "bis": "2020-04", "text": "2020"}], "events": [{"id": "wien-1873", "titel": "Börsenkrach in Wien", "datum": "1873-05", "kategorie": "krisen", "beschreibung": "Der «Schwarze Freitag» in Wien löst eine Krise aus, die sich auf Europa und die USA ausweitet. Es beginnt die «Lange Depression»."}, {"id": "panik-1893", "titel": "Panik von 1893", "datum": "1893", "kategorie": "krisen", "beschreibung": "Eisenbahnpleiten und Sorge um die Goldreserve lösen in den USA eine schwere Banken- und Wirtschaftskrise aus."}, {"id": "panik-1907", "titel": "Bankenpanik von 1907", "datum": "1907-10", "kategorie": "krisen", "beschreibung": "Der Zusammenbruch einer New Yorker Treuhandgesellschaft löst eine Bankenpanik aus. Die Privatbank J. P. Morgan muss das Finanzsystem stützen."}, {"id": "fed-1913", "titel": "Gründung der Federal Reserve", "datum": "1913-12-23", "kategorie": "geld", "beschreibung": "Die USA schaffen eine Zentralbank, auch als Antwort auf die Panik von 1907."}, {"id": "hyperinflation-1923", "titel": "Hyperinflation in Deutschland", "datum": "1923", "kategorie": "krisen", "beschreibung": "Die Preise steigen so schnell, dass das Geld täglich an Wert verliert. Erst die Währungsreform im November 1923 beendet es."}, {"id": "crash-1929", "titel": "Börsencrash an der Wall Street", "datum": "1929-10", "kategorie": "krisen", "beschreibung": "Am 24. und 29. Oktober 1929 brechen die Aktienkurse ein. Der Crash steht am Anfang der Weltwirtschaftskrise, ist aber nicht ihre einzige Ursache.", "notiz": "notizen/crash-1929.md"}, {"id": "kreditanstalt-1931", "titel": "Zusammenbruch der Kreditanstalt", "datum": "1931-05", "kategorie": "krisen", "beschreibung": "Die grösste Bank Österreichs bricht zusammen. Die Bankenkrise greift auf Deutschland und weitere Länder über."}, {"id": "newdeal-1933", "titel": "New Deal", "datum": "1933-03", "kategorie": "politik", "beschreibung": "Präsident Roosevelt beginnt mit Staatsausgaben, Bankenregeln und Arbeitsprogrammen gegen die Krise."}, {"id": "keynes-1936", "titel": "Keynes: «General Theory»", "datum": "1936-02", "kategorie": "politik", "beschreibung": "John Maynard Keynes begründet, warum der Staat in Krisen die Nachfrage stützen soll."}, {"id": "brettonwoods-1944", "titel": "Bretton Woods", "datum": "1944-07", "kategorie": "geld", "beschreibung": "44 Staaten ordnen das Währungssystem neu: Der Dollar ist an Gold gebunden, die anderen Währungen am Dollar."}, {"id": "nixon-1971", "titel": "Ende der Goldbindung des Dollars", "datum": "1971-08-15", "kategorie": "geld", "beschreibung": "Präsident Nixon löst den Dollar vom Gold. Das System von Bretton Woods bricht zusammen.", "notiz": "notizen/nixon-1971.md"}, {"id": "oel-1973", "titel": "Erste Ölpreiskrise", "datum": "1973-10", "kategorie": "krisen", "beschreibung": "Die Förderländer drosseln das Öl, der Preis steigt stark. Es folgen Inflation und Arbeitslosigkeit zugleich («Stagflation»).", "notiz": "notizen/oel-1973.md"}, {"id": "volcker-1979", "titel": "Volcker-Schock", "datum": "1979-10", "kategorie": "geld", "beschreibung": "Die US-Notenbank hebt die Zinsen drastisch an, um die Inflation zu brechen. Sie nimmt dafür eine Rezession in Kauf."}, {"id": "blackmonday-1987", "titel": "Black Monday", "datum": "1987-10-19", "kategorie": "krisen", "beschreibung": "Die Aktienkurse stürzen an einem Tag weltweit ein, besonders stark an der Wall Street."}, {"id": "asien-1997", "titel": "Asienkrise", "datum": "1997-07", "kategorie": "krisen", "beschreibung": "Die thailändische Währung gerät unter Druck. Die Krise erfasst Südostasien und Südkorea."}, {"id": "dotcom-2000", "titel": "Platzen der Dotcom-Blase", "datum": "2000-03", "kategorie": "krisen", "beschreibung": "Die Kurse der Internetfirmen fallen stark. Es folgt eine kurze Rezession."}, {"id": "lehman-2008", "titel": "Lehman Brothers geht pleite", "datum": "2008-09-15", "kategorie": "krisen", "beschreibung": "Die US-Investmentbank bricht zusammen. Die Finanzkrise wird zu einer weltweiten Krise.", "notiz": "notizen/lehman-2008.md"}, {"id": "euro-2010", "titel": "Eurokrise", "datum": "2010-05", "kategorie": "krisen", "beschreibung": "Griechenland wird mit Hilfskrediten gestützt. Auch Irland, Portugal, Spanien und Zypern geraten in Schwierigkeiten."}, {"id": "corona-2020", "titel": "Corona-Schock", "datum": "2020-03", "kategorie": "krisen", "beschreibung": "Lockdowns legen die Wirtschaft in kurzer Zeit lahm. Mit nur zwei Monaten die kürzeste Rezession in den NBER-Daten."}, {"id": "zinswende-2022", "titel": "Zinswende", "datum": "2022-03-16", "kategorie": "geld", "beschreibung": "Die US-Notenbank hebt die Zinsen nach Jahren erstmals wieder an, um die hohe Inflation zu bekämpfen."}, {"id": "creditsuisse-2023", "titel": "Credit Suisse und UBS", "datum": "2023-03-19", "kategorie": "krisen", "beschreibung": "Nach dem Vertrauensverlust in die Credit Suisse wird sie im März 2023 von der UBS übernommen."}], "stories": [{"id": "geld-system", "name": "Vom Goldstandard zum Geldsystem von heute", "events": ["brettonwoods-1944", "nixon-1971", "oel-1973", "volcker-1979", "zinswende-2022"]}, {"id": "bankenkrisen", "name": "Bankenkrisen", "events": ["panik-1907", "kreditanstalt-1931", "lehman-2008", "creditsuisse-2023"]}], "appVersion": "2.0.1"}, "notes": {"notizen/oel-1973.md": "# Erste Ölpreiskrise 1973\n\nIm Oktober 1973 drosselten erdölfördernde arabische Staaten die Förderung und verhängten ein Lieferverbot gegen Länder, die Israel unterstützten. Der Ölpreis stieg innert Monaten auf ein Mehrfaches.\n\n**Stagflation:** Die Preise stiegen (Inflation), gleichzeitig stagnierte die Wirtschaft und die Arbeitslosigkeit stieg. Das passte schlecht zu den bisherigen Rezepten der Wirtschaftspolitik und stärkte die Kritik am Keynesianismus.\n\n**Fragen**\n\n1. Warum war eine Rezession mit Inflation eine neue Lage?\n2. Welche Folgen hatte die Krise für die Energiepolitik?\n", "notizen/crash-1929.md": "# Börsencrash 1929\n\nAm 24. Oktober 1929 («Schwarzer Donnerstag») und am 29. Oktober («Schwarzer Dienstag») brachen die Aktienkurse an der Wall Street ein. Bis zum Sommer 1932 verlor der Dow-Jones-Index rund neun Zehntel seines Höchststandes.\n\n**Was daraus folgte**\n\n- Banken gingen reihenweise Pleite, weil viele Kredite nicht mehr zurückgezahlt wurden.\n- Die Nachfrage brach ein, Firmen entliessen Menschen, die Arbeitslosigkeit stieg in den USA auf etwa ein Viertel.\n- Die Krise breitete sich über die Goldbindung der Währungen auf die ganze Welt aus.\n\n**Wichtig:** Der Crash war ein Auslöser und ein Symbol, aber nicht die einzige Ursache der Weltwirtschaftskrise. Historiker streiten bis heute über die Gewichtung.\n\n**Fragen**\n\n1. Warum wurde aus einem Börsencrash eine Weltwirtschaftskrise?\n2. Welche Rolle spielte die Goldbindung?\n", "notizen/lehman-2008.md": "# Lehman Brothers 2008\n\nAm 15. September 2008 meldete die US-Investmentbank Lehman Brothers Insolvenz an. Vorher war über Jahre eine Blase am US-Immobilienmarkt gewachsen. Die Kredite waren verbrieft und weltweit verkauft worden. Als die Preise fielen, wusste niemand mehr, wer wie viel Risiko trug.\n\n**Reaktion**\n\n- Notenbanken senkten die Zinsen und stellten Geld bereit.\n- Staaten stützten Banken mit Steuergeld.\n- Die Wirtschaft schrumpfte weltweit, die Rezession in den USA dauerte nach NBER von Dezember 2007 bis Juni 2009.\n\n**Fragen**\n\n1. Warum wurde der Zusammenbruch einer Bank zur weltweiten Krise?\n2. Sollen Staaten Banken retten, die ein zu grosses Risiko eingegangen sind?\n", "notizen/nixon-1971.md": "# Ende der Goldbindung 1971\n\nIm Bretton-Woods-System konnten andere Länder Dollar gegen Gold tauschen. Mit der Zeit liefen mehr Dollar um, als in den USA an Gold lag. Am 15. August 1971 beendete Präsident Nixon den Umtausch.\n\n**Folgen**\n\n- Die Wechselkurse wurden später frei (schwankend).\n- Geld war nicht mehr an Gold gebunden, sondern am Vertrauen in Staaten und Notenbanken.\n- Die Notenbanken bekamen mehr Spielraum, aber auch mehr Verantwortung.\n\n**Frage:** Was ist der Unterschied zwischen Geld, das an Gold gebunden ist, und Geld, das nur auf Vertrauen beruht?\n"}};/*DEMO3_END*/
 </script>
 </body>
 </html>

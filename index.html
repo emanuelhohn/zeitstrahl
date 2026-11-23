@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Zeitstrahl · Version 2.0.4 (2026-11-18) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
+<!-- Zeitstrahl · Version 2.2 (2026-11-23) · Autor: eho · entwickelt mit Unterstützung von Claude (Anthropic) -->
 <html lang="de-CH">
 <head>
 <meta charset="utf-8">
 <meta name="author" content="eho">
-<meta name="version" content="2.0.4">
+<meta name="version" content="2.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zeitstrahl</title>
 <style>
@@ -29,7 +29,13 @@ button{font:inherit;color:inherit}
 #top{display:flex;align-items:center;gap:.8rem;padding:.5rem 1rem;border-bottom:1px solid var(--line);flex:none;position:relative}
 body.editing #top{background:color-mix(in srgb,var(--accent) 10%,var(--bg))}
 #ttl{font-size:1.15rem;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw}
-#legend{display:flex;gap:.4rem;flex-wrap:wrap;flex:1}
+#legend{display:flex;gap:.4rem;flex-wrap:wrap;flex:1;position:relative;min-width:0}
+.legchips{display:flex;gap:.4rem;flex-wrap:wrap;min-width:0}
+#legTog{display:none;white-space:nowrap}
+#legend.collapsed{flex:none}
+#legend.collapsed #legTog{display:inline-flex}
+#legend.collapsed .legchips{display:none}
+#legend.collapsed.open .legchips{display:flex;width:max-content;position:absolute;top:calc(100% + .3rem);left:0;z-index:36;max-width:min(40rem,92vw);padding:.6rem;background:var(--panel);border:1px solid var(--line);border-radius:.6rem;box-shadow:var(--shadow)}
 .chip{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:var(--panel);
   border-radius:99px;padding:.15rem .7rem .15rem .5rem;font-size:.85rem;cursor:pointer}
 .chip::before{content:"";width:.7rem;height:.7rem;border-radius:50%;background:var(--c)}
@@ -275,6 +281,8 @@ body.start #legend,body.start #caption{display:none}
 .form label.kind input{margin-top:.3rem;width:auto;flex:none}
 .form label.kind b{display:block;font-weight:700}
 .form label.kind span{display:block;color:var(--mute);font-size:.85rem}
+.presets{display:flex;flex-wrap:wrap;gap:.35rem;margin:.2rem 0 .5rem}
+.catdot{width:.9rem;height:.9rem;border-radius:50%;flex:none}
 .examples{margin:2rem 0 .3rem;padding-top:1rem;border-top:1px solid var(--line)}
 .examples .exl{font-size:.8rem;color:var(--mute);margin-bottom:.2rem}
 #welcome .examples .btn{padding:.5rem .85rem;font-size:.92rem}
@@ -385,7 +393,7 @@ body.web #admin{opacity:1}
 /* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
 const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '2.0.4', VERSION_DATE = '2026-11-18', AUTHOR = 'eho';
+const VERSION = '2.2', VERSION_DATE = '2026-11-23', AUTHOR = 'eho';
 /* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
 const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
@@ -406,7 +414,7 @@ const EXTRA = ['#e4572e','#d1495b','#9c1c3d','#b5361f','#c25e0a','#a87400','#7a5
                '#6b8e23','#3a7d44','#0b5d3b','#00796b','#1f8578','#0277bd','#1a4fa0','#1b2f6e',
                '#3949ab','#5e35b1','#4a2c82','#8e24aa','#d81b60','#a0527c','#4f7cac','#b0446b'];   /* Farbrad: weisse Schrift bleibt lesbar */
 const NOCAT = '#6a675f';
-const MAXCATS = 8;
+const MAXCATS = 12;
 const DEFAULT_CATS = () => [
   { id:'krieg', name:'Krieg & Konflikt', farbe:PALETTE[0] },
   { id:'geopolitik', name:'Geopolitik & Diplomatie', farbe:PALETTE[1] },
@@ -739,9 +747,37 @@ function uniqueId(base){
   base = base || 'ereignis'; const ids = new Set((S.data.events || []).map(e => e.id)); let id = base, n = 2;
   while (ids.has(id)) id = `${base}-${n++}`; return id;
 }
+/* Kategorien-Vorlagen fürs Setup (Name, Farbe, optional Darstellung); eine Vorlage wird an die Liste angehängt */
+const CAT_PRESETS = {
+  wirtschaft:{ n:'Wirtschaftsgeschichte', c:[['Handel & Geld', '#1e7a4f'], ['Produktion & Technik', '#9a6a00'], ['Krisen & Katastrophen', '#c8452f'], ['Ideen & Theorien', '#2b59c3'], ['Staat & Politik', '#0f8b9a'], ['Krieg & Konflikt', '#c2185b'], ['Denker & Personen', '#7b4fb0', 'balken']] },
+  allgemein:{ n:'Allgemein', c:[['Ereignisse', '#c8452f'], ['Personen', '#7b4fb0', 'balken'], ['Ideen und Begriffe', '#2b59c3']] },
+  buch:{ n:'Buch', c:[['Handlung', '#2b59c3'], ['Personen', '#7b4fb0', 'balken'], ['Orte', '#1e7a4f'], ['Motive und Deutung', '#9a6a00']] },
+  lernen:{ n:'Lernen (Fächer)', c:[['Deutsch', '#c8452f'], ['Mathematik', '#2b59c3'], ['Biologie', '#1e7a4f'], ['Geschichte', '#9a6a00']] },
+  welt:{ n:'Weltgeschehen', c:DEFAULT_CATS().map(c => [c.name, c.farbe]) }
+};
+const KIND_PRESET = { zeit:'wirtschaft', num:'buch', eigen:'lernen' };
+function presetAdd(list, key){                                        // hängt an (ohne Doppelte, höchstens MAXCATS); Rückgabe: Zahl der nicht mehr passenden
+  const p = CAT_PRESETS[key]; let skipped = 0; if (!p) return 0;
+  for (const [name, farbe, dar] of p.c){
+    if (list.some(c => String(c.name).trim().toLowerCase() === name.toLowerCase())) continue;
+    if (list.length >= MAXCATS){ skipped++; continue; }
+    const used = new Set(list.map(c => c.farbe)), col = used.has(farbe) ? (PALETTE.concat(EXTRA).find(x => !used.has(x)) || farbe) : farbe;
+    list.push({ name, farbe:col, ...(dar ? { darstellung:dar } : {}) });
+  }
+  return skipped;
+}
+function catsToData(list){
+  const out = [], ids = new Set();
+  for (const c of list){
+    const name = String(c.name || '').trim(); if (!name || out.length >= MAXCATS) continue;
+    let b = slug(name) || 'kategorie', id = b, n = 2; while (ids.has(id)) id = `${b}-${n++}`; ids.add(id);
+    out.push({ id, name, farbe:c.farbe, ...(c.darstellung === 'balken' ? { darstellung:'balken' } : {}) });
+  }
+  return out;
+}
 const STATION_CATS = () => [{ id:'personen', name:'Personen', farbe:PALETTE[4] }, { id:'themen', name:'Themen', farbe:PALETTE[1] }];
-function newData(name, achse){
-  const d = { titel: name, kategorien: achse ? STATION_CATS() : DEFAULT_CATS(), events: [], stories: [], appVersion: VERSION };
+function newData(name, achse, cats){
+  const d = { titel: name, kategorien: cats || (achse ? STATION_CATS() : DEFAULT_CATS()), events: [], stories: [], appVersion: VERSION };
   if (achse) d.achse = achse;
   return d;
 }
@@ -801,14 +837,29 @@ function setData(src, data){
   const vp = $('#viewport'); vp.scrollLeft = S.st ? Math.max(0, dayToX(0) - vpW() * .08) : Math.max(endScrollLeft(), dayToX(S.t0) - vpW() * .04); vp.scrollTop = 0; centerAxis();   // beim Öffnen: das neuste Ereignis, ganz rechts (kurze Zeitstrahlen: ganze Achse)
   renderTicks();
 }
+/* Kategorie-Knöpfe: reichen zwei Zeilen nicht (viele oder lange Namen, schmales Fenster), klappen sie zu einem Knopf «Kategorien ▾» zusammen */
 function buildLegend(){
   const l = $('#legend'); l.textContent = '';
+  const tog = el('button', 'chip legtog'); tog.id = 'legTog'; tog.type = 'button'; tog.onclick = () => l.classList.toggle('open');
+  const wrap = el('div', 'legchips');
   for (const c of S.data.kategorien){
     const b = el('button', 'chip' + (S.hidden.has(c.id) ? ' off' : '')); b.style.setProperty('--c', c.farbe); b.textContent = c.name;
     b.onclick = () => { S.hidden.has(c.id) ? S.hidden.delete(c.id) : S.hidden.add(c.id); buildLegend(); layout(); };
-    l.append(b);
+    wrap.append(b);
   }
+  const n = S.data.kategorien.length, h = [...S.hidden].filter(id => S.cats[id]).length;
+  tog.textContent = `Kategorien${h ? ` (${n - h} von ${n})` : ''} ▾`;
+  l.append(tog, wrap); fitLegend();
 }
+function fitLegend(){
+  try {
+    const l = $('#legend'), w = l.querySelector('.legchips'); if (!w) return;
+    const wasOpen = l.classList.contains('open'); l.classList.remove('collapsed', 'open');
+    const chips = [...w.children]; if (!chips.length || typeof chips[0].offsetTop !== 'number') return;
+    if (new Set(chips.map(c => c.offsetTop)).size > 2){ l.classList.add('collapsed'); if (wasOpen) l.classList.add('open'); }
+  } catch {}
+}
+document.addEventListener('click', ev => { const l = $('#legend'); if (l && !(ev.composedPath ? ev.composedPath() : []).includes(l)) l.classList.remove('open'); });   // composedPath: der angeklickte Knopf wird beim Neuaufbau aus dem DOM entfernt
 /* Nach Änderungen an den Daten: neu aufbauen, Ansicht möglichst beibehalten */
 function refresh(){
   const vp = $('#viewport'), midDay = xToDay(vp.scrollLeft + vp.clientWidth / 2), top = vp.scrollTop, selId = S.sel && S.sel.id;
@@ -1051,7 +1102,7 @@ function layout(){
   } else {
     /* Bahnen: eine Zeile pro Kategorie */
     S.axisY = null;
-    const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id)).map(c => ({ c, evs: [], levels: 0, bar: c.darstellung === 'balken' }));
+    const groups = S.data.kategorien.filter(c => !S.hidden.has(c.id) && S.events.some(e => e.kat === c.id)).map(c => ({ c, evs: [], levels: 0, bar: c.darstellung === 'balken' }));
     if (vis.some(e => !e.kat)) groups.push({ c:{ id:null, name:'Ohne Kategorie', farbe:NOCAT }, evs: [], levels: 0 });
     for (const e of vis){ const g = groups.find(g => g.c.id === (e.kat || null)); if (g) g.evs.push(e); }
     for (const g of groups){
@@ -2251,7 +2302,7 @@ $('#viewport').addEventListener('wheel', ev => {
   }
 }, { passive:false });
 let tk = 0; $('#viewport').addEventListener('scroll', () => { cancelAnimationFrame(tk); tk = requestAnimationFrame(renderTicks); hideTip(); });
-let rt = 0; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.data) layout(); }, 150); });
+let rt = 0; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.data){ fitLegend(); layout(); } }, 150); });
 $('#zIn').onclick = () => setZoom(S.ppd * 1.4, $('#viewport').clientWidth / 2);
 $('#zOut').onclick = () => setZoom(S.ppd / 1.4, $('#viewport').clientWidth / 2);
 $('#zAll').onclick = overview;
@@ -2400,11 +2451,31 @@ function openSetup(defTitle, intro){
         <div><label>Anzahl (1–200)</label><input type="text" id="n-count" value="12" inputmode="numeric" autocomplete="off"></div></div></div>
       <div id="n-eigen" hidden><label>Einheit</label><input type="text" id="n-unit2" value="Station" autocomplete="off">
         <label>Stationen (eine pro Zeile, in der gewünschten Reihenfolge)</label><textarea id="n-lines" placeholder="Lernphase 1&#10;Lernphase 2&#10;Lernphase 3"></textarea></div>
+      <label>Kategorien (höchstens ${MAXCATS})</label>
+      <div class="presets" id="n-presets"></div><div id="n-cats"></div>
+      <div class="hintline">Eine Vorlage anklicken hängt ihre Kategorien an die Liste an. Namen, Darstellung (Karte oder Balken) und Reihenfolge lassen sich hier und später in den Einstellungen ändern. Farben vergibt die App. Weniger Kategorien sind übersichtlicher.</div>
       <div class="hintline" style="margin-top:.8rem">Die Art lässt sich nach dem Anlegen nicht mehr ändern. Die Stationen selbst schon: umbenennen, ergänzen, verschieben (Einstellungen).</div>
       <div class="actions"><span class="sp"></span><span class="err" id="n-err"></span><button class="btn" id="n-cancel">Abbrechen</button><button class="btn primary" id="n-go">Anlegen</button></div>`;
     $('#n-titel').value = defTitle || 'Mein Zeitstrahl';
     const kind = () => (document.querySelector('input[name="n-kind"]:checked') || {}).value || 'zeit';
-    const sync = () => { const k = kind(); $('#n-num').hidden = k !== 'num'; $('#n-eigen').hidden = k !== 'eigen'; $('#n-err').textContent = ''; };
+    let cats = [], dirty = false;                                              // Kategorienliste; solange nicht bearbeitet, folgt sie der Art
+    const renderCats = () => {
+      const box = $('#n-cats'); box.textContent = '';
+      cats.forEach((c, i) => {
+        const r = el('div', 'catrow'), dot = el('span', 'catdot'); dot.style.background = c.farbe;
+        const inp = el('input'); inp.type = 'text'; inp.value = c.name; inp.setAttribute('enterkeyhint', 'done'); inp.oninput = () => { c.name = inp.value; dirty = true; };
+        const sel = el('select'); sel.style.cssText = 'width:6.4rem;flex:none'; [['karte', 'Karte'], ['balken', 'Balken']].forEach(([v, n]) => { const o = el('option'); o.value = v; o.textContent = n; sel.append(o); });
+        sel.value = c.darstellung === 'balken' ? 'balken' : 'karte'; sel.onchange = () => { if (sel.value === 'balken') c.darstellung = 'balken'; else delete c.darstellung; dirty = true; };
+        const rm = el('button', 'mini'); rm.type = 'button'; rm.textContent = '✕'; rm.title = 'Entfernen'; rm.onclick = () => { cats.splice(i, 1); dirty = true; renderCats(); };
+        r.append(dot, inp, sel, rm); box.append(r);
+      });
+      if (!cats.length) { const p = el('div', 'hintline'); p.textContent = 'Keine Kategorien: Einträge erscheinen ohne Kategorie. Du kannst später in den Einstellungen welche anlegen.'; box.append(p); }
+    };
+    const presets = $('#n-presets');
+    Object.keys(CAT_PRESETS).forEach(k => { const b = el('button', 'mini'); b.type = 'button'; b.textContent = '+ ' + CAT_PRESETS[k].n; b.onclick = () => { const sk = presetAdd(cats, k); dirty = true; renderCats(); $('#n-err').textContent = sk ? `Höchstens ${MAXCATS} Kategorien: ${sk} nicht mehr aufgenommen.` : ''; }; presets.append(b); });
+    { const b = el('button', 'mini'); b.type = 'button'; b.textContent = 'Liste leeren'; b.onclick = () => { cats = []; dirty = true; renderCats(); }; presets.append(b); }
+    const fillDefault = () => { if (dirty) return; cats = []; presetAdd(cats, KIND_PRESET[kind()] || 'wirtschaft'); renderCats(); };
+    const sync = () => { const k = kind(); $('#n-num').hidden = k !== 'num'; $('#n-eigen').hidden = k !== 'eigen'; $('#n-err').textContent = ''; fillDefault(); };
     document.querySelectorAll('input[name="n-kind"]').forEach(r => r.onchange = sync);
     const done = v => { $('#setupdlg').hidden = true; SETUP.cancel = null; resolve(v); };
     SETUP.cancel = () => done(null);
@@ -2422,8 +2493,9 @@ function openSetup(defTitle, intro){
         if (lines.length > 200) return err.textContent = 'Höchstens 200 Stationen.';
         achse = { art:'stationen', einheit:unit, stationen:lines.map((l, i) => ({ id:'s' + (i + 1), label:l })) };
       }
-      done(newData(titel, achse));
+      done(newData(titel, achse, catsToData(cats)));
     };
+    fillDefault();
     $('#setupdlg').hidden = false; $('#n-titel').focus(); $('#n-titel').select();
   });
 }

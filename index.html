@@ -46,6 +46,21 @@ body.editing #top{background:color-mix(in srgb,var(--accent) 10%,var(--bg))}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.danger{color:var(--danger);border-color:var(--danger)}
 .grp{display:flex;gap:.3rem;align-items:center}
+/* Kopfzeile: Zoom als ein Bedienelement; feiner Strich zwischen Ansicht und Datei */
+.zseg{display:flex;border:1px solid var(--line);border-radius:.4rem;overflow:hidden}
+.zseg .btn{border:0;border-radius:0;margin:0}
+.zseg .btn + .btn{border-left:1px solid var(--line)}
+#admin{border-left:1px solid var(--line);padding-left:.7rem;margin-left:.35rem}
+.zseg .btn{white-space:nowrap}
+/* schmale Bildschirme (iPad hochkant): Kopfzeile kompakter, Status nur als Punkt (ganzer Text im Tooltip) */
+@media (max-width:1000px){
+  #top{gap:.45rem}
+  #top .btn,.seg button{padding:.3rem .5rem}
+  #top #storySel{max-width:7rem}
+  #fileStatus{display:inline-block;max-width:1.05em;overflow:hidden;vertical-align:middle}
+  #admin{padding-left:.45rem;margin-left:.15rem}
+  #ttl{min-width:4rem}
+}
 .seg{display:flex;border:1px solid var(--line);border-radius:.4rem;overflow:hidden}
 .seg button{border:0;background:var(--panel);padding:.3rem .7rem;cursor:pointer;font-size:.9rem}
 .seg button.on{background:var(--ink);color:var(--bg)}
@@ -167,7 +182,7 @@ button{touch-action:manipulation}
 .grid{position:absolute;left:0;right:0;z-index:0;pointer-events:none}
 .gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.7}
 .gl.brk-line{width:0;background:none;border-left:2px dashed var(--mute);opacity:.6}
-.brk{position:absolute;top:-.1rem;font-size:1.15rem;font-weight:700;color:var(--mute);letter-spacing:-.12em;white-space:nowrap}
+.brk{position:absolute;top:-.1rem;font-size:1.15rem;font-weight:700;color:var(--mute);letter-spacing:-.12em;white-space:nowrap;background:var(--bg);padding:0 .2rem;line-height:1.2;z-index:1}
 /* Story-Modus: Kontext bleibt sichtbar, aber gedimmt */
 /* Ohne Kategorie: hohl und gestrichelt, nie mit einer Kategoriefarbe zu verwechseln */
 .card.nocat{background:var(--bg);border:1.5px dashed var(--mute);box-shadow:none}
@@ -345,6 +360,10 @@ body.start #legend,body.start #caption{display:none}
 .form label.kind input{margin-top:.3rem;width:auto;flex:none}
 .form label.kind b{display:block;font-weight:700}
 .form label.kind span{display:block;color:var(--mute);font-size:.85rem}
+.xopts{display:grid;gap:.5rem;margin:.9rem 0 .3rem}
+.xopt{display:flex;flex-direction:column;gap:.15rem;text-align:left;padding:.65rem .8rem;border:1px solid var(--line);border-radius:.5rem;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+.xopt:hover{border-color:var(--ink)}
+.xopt b{font-size:.98rem}.xopt span{font-size:.83rem;color:var(--mute)}
 .presets{display:flex;flex-wrap:wrap;gap:.35rem;margin:.2rem 0 .5rem;align-items:center}
 .presetlbl{font-size:.8rem;color:var(--mute);margin-right:.15rem}
 .presets .preset{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
@@ -358,7 +377,7 @@ body.start #legend,body.start #caption{display:none}
 :root[data-bg=hellgrau]:not([data-theme=dark]){--bg:#ebebea}
 :root[data-bg=blaugrau]:not([data-theme=dark]){--bg:#e8edf2}
 /* Nur-Ansicht-Modus (Export für GitHub Pages): alles zum Bearbeiten und Exportieren ausblenden */
-body.web #btnEdit,body.web #btnAdd,body.web #btnSave,body.web #fileStatus,body.web #mFolder,body.web #mSettings,body.web #mStories,body.web #mSave,body.web #mExport,body.web #mWeb,body.web #mPdf,body.web #mPdfA1{display:none}
+body.web #btnEdit,body.web #btnAdd,body.web #btnSave,body.web #fileStatus,body.web #mFolder,body.web #mSettings,body.web #mStories,body.web #mExportAll{display:none}
 body.web #admin{opacity:1}
 /* PDF-Export: eine eigene Druckseite, der Rest der App wird beim Drucken ausgeblendet */
 #printroot{display:none;--panel:#fff;--ink:#1d1d1b;--mute:#6a675f;--line:#d3cec3;--axis:#2a2a28;--shadow:0 1px 2px rgba(0,0,0,.12);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -390,15 +409,13 @@ body.web #admin{opacity:1}
     <div class="seg" id="view"><button data-v="achse">Achse</button><button data-v="bahnen">Bahnen</button></div>
     <button class="btn" id="stSel" hidden title="Stationen ein- und ausblenden"></button>
     <select id="storySel" hidden title="Story auswählen (S)"></select>
-    <button class="btn" id="zOut" title="Verkleinern (–)">−</button>
-    <button class="btn" id="zIn" title="Vergrössern (+)">+</button>
-    <button class="btn" id="zAll" title="Alles zeigen (0)">Alles</button>
+    <div class="zseg"><button class="btn" id="zOut" title="Verkleinern (–)">−</button><button class="btn" id="zAll" title="Alles zeigen (0)">Alles</button><button class="btn" id="zIn" title="Vergrössern (+)">+</button></div>
     <button class="btn" id="btnSearch" title="Suche (/)" aria-label="Suche"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 10l4.6 4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   </div>
   <div class="grp" id="admin" hidden>
     <span id="fileStatus" hidden></span>
     <button class="btn primary" id="btnAdd" hidden>+ Ereignis</button>
-    <button class="btn" id="btnSave" hidden>Sichern</button>
+    <button class="btn" id="btnSave" hidden title="Sichern (Strg+S / ⌘S)">Sichern</button>
     <button class="btn" id="btnEdit">Bearbeiten</button>
     <button class="btn" id="btnMenu" title="Menü">⋯</button>
   </div>
@@ -412,11 +429,7 @@ body.web #admin{opacity:1}
   <button id="mStories">Stories verwalten …</button>
   <button id="mInfobox" hidden>Infobox anzeigen</button>
   <button id="mMarks" hidden>Markierungen ausblenden (M)</button>
-  <button id="mSave" hidden>Sichern …</button>
-  <button id="mExport">Exportieren für Backup (Zip) …</button>
-  <button id="mWeb">Exportieren als Webseite (View Only, Zip) …</button>
-  <button id="mPdf">Exportieren als PDF …</button>
-  <button id="mPdfA1">Exportieren als PDF (Format A1) …</button>
+  <button id="mExportAll">Exportieren …</button>
   <button id="mTheme">Hell / Dunkel (T)</button>
   <button id="mFs">Vollbild (F)</button>
   <div class="info" id="mInfo"></div>
@@ -441,7 +454,7 @@ body.web #admin{opacity:1}
         <div class="wopts">
           <div class="wopt"><button class="btn" id="btnZip">Zip-Datei öffnen …</button>
             <div class="wd">Zeitstrahl aus einer Zip-Datei öffnen, z.B. eine von der Lehrperson verteilte Vorlage. In allen Browsern verfügbar, auch auf dem iPad. Änderungen bleiben im Speicher, bis über <b>«Sichern»</b> eine neue Zip-Datei erstellt wird.</div></div>
-          <div class="wopt" id="woFolder"><button class="btn" id="btnOpen">Ordner öffnen …</button>
+          <div class="wopt advonly" id="woFolder"><button class="btn" id="btnOpen">Ordner öffnen …</button>
             <div class="wd" id="wdFolder"></div></div>
         </div></div>
 
@@ -479,7 +492,7 @@ body.web #admin{opacity:1}
 /* Kopie der eigenen Seite, noch bevor das Skript etwas verändert (für «Exportieren für GitHub Pages») */
 const SELF = '<!doctype html>\n' + document.documentElement.outerHTML;
 /* Version dieser App-Datei. Bei jeder Änderung hochzählen und in README («Versionen und Kompatibilität») eintragen. */
-const VERSION = '2.5', VERSION_DATE = '2026-11-24', AUTHOR = 'eho';
+const VERSION = '2.7', VERSION_DATE = '2026-11-24', AUTHOR = 'eho';
 /* Nur-Ansicht-Modus: im Export für GitHub Pages steht hier die Konfiguration, sonst null */
 const WEB = /*WEB_START*/null/*WEB_END*/;
 /* ========== Hilfen ========== */
@@ -914,7 +927,8 @@ function recomputeSpan(){
     if (m.aktiv === false) continue;
     for (const [v, end] of [[m.von, false], [m.art === 'bereich' ? m.bis : null, true]]){ if (!v) continue; const p = parseDate(v, end); if (p && !p.bc) ad.push(p.day); }
   }
-  if (ad.length){ S.t0 = Math.min(...ad) - 30; S.tmax = Math.max(...ad) + 30; }
+  if (ad.length){ S.t0 = Math.min(...ad) - 30; S.tmax = Math.max(...ad) + 30;
+    if (S.bcYears.length) S.t0 = Math.min(S.t0, daysFromCivil(1, 1, 1)); }   // mit Einträgen v. Chr.: Achse ab Jahr 1, damit die Abstände nach Christus stimmen (gestaucht ist nur v. Chr.)
   else if (S.bcYears.length){ S.t0 = daysFromCivil(1, 1, 1); S.tmax = S.t0 + 365; }
   else { S.t0 = today - 395; S.tmax = today + 395; }
   const minSpan = MIN_VIEW_YEARS * 365.25;                       // zu kurze Achse symmetrisch auf die Mindestspanne verlängern
@@ -933,9 +947,9 @@ function setData(src, data){
   $('#ttl').textContent = data.titel || src.name; document.title = winTitle(data.titel || src.name);
   document.body.classList.remove('start'); $('#welcome').hidden = true; $('#viewtools').hidden = false; $('#admin').hidden = false;
   { const fm = !!src.fileMode;                                   // Datei-Modus: Sichern-Knopf und Status sichtbar
-    S.dirty = false; S.zipReady = null; S.savedAt = null; S.zipVer++;
+    S.dirty = false; S.zipReady = null; S.savedAt = null; S.savedHow = null; S.zipVer++;
     document.body.classList.toggle('filemode', fm);
-    $('#btnSave').hidden = $('#fileStatus').hidden = $('#mSave').hidden = !fm;
+    $('#fileStatus').hidden = !fm; $('#btnSave').hidden = !(fm || src.demo);          // Beispiele: «Sichern» speichert eine eigene Kopie
     updateFileStatus(); }
   $('#btnEdit').disabled = !src.canWrite;
   $('#btnEdit').title = src.canWrite ? '' : 'Dieser Ordner ist nur lesbar (Firefox/Safari). Zum Bearbeiten Chrome oder Edge verwenden.';
@@ -1184,7 +1198,7 @@ function layout(){
   /* Achsenbalken; mit Lücke zwischen dem v.-Chr.-Block und der Achse ab Jahr 1 */
   const addBars = (parent, top) => {
     const mk = (l, w, fl, fr) => { const b = el('div', 'bar' + (fl ? ' fl' : '') + (fr ? ' fr' : '')); b.style.top = top + 'px'; b.style.left = l + 'px'; b.style.right = 'auto'; b.style.width = Math.max(0, w) + 'px'; parent.append(b); };
-    if (S.bcW > 0){ mk(0, S.pad + S.bcSlot * S.bcYears.length, true, false); mk(S.pad + S.bcW, W - S.pad - S.bcW, false, true); } else mk(0, W, true, true);
+    mk(0, W, true, true);                                          // durchgehend; der Bruch zwischen v. Chr. und Jahr 1 ist mit // markiert
   };
 
   if (!bahn){
@@ -1337,10 +1351,10 @@ function renderTicks(){
   }
   if (!monthMode){
     const px = ppd * 365.25, step = [1,2,5,10,20,50,100,200,500,1000].find(s => px * s >= 64) || 2000;
-    for (let y = y0; y <= y1; y++) if (y % step === 0){ const x = dayToX(daysFromCivil(y, 1, 1)); ln(x, true); lb(x, y, 2); }
+    for (let y = y0; y <= y1; y++) if (y % step === 0){ const d = daysFromCivil(y, 1, 1); if (S.bcW > 0 && d < S.t0) continue; const x = dayToX(d); ln(x, true); lb(x, y, 2); }
   } else {
     for (let y = y0; y <= y1; y++) for (let m = 1; m <= 12; m++){
-      const d = daysFromCivil(y, m, 1); if (d < da - 40 || d > db + 40) continue;
+      const d = daysFromCivil(y, m, 1); if (d < da - 40 || d > db + 40 || (S.bcW > 0 && d < S.t0)) continue;
       const x = dayToX(d);
       if (dayMode){ ln(x, true); lb(x, `${MONTHS[m-1]} ${y}`, 2); }
       else { ln(x, m === 1); lb(x, MONTHS[m-1], 1); if (m === 1) lb(x, y, 2); }
@@ -2183,10 +2197,8 @@ async function exportZip(){
     for (const path of paths) entries.push({ path, blob: await S.src.file(path) });
     const root = slug(S.data.titel || S.src.name) || 'zeitstrahl';
     const blob = await buildZip(root, entries, (i, n) => setStatus(`Export … ${i}/${n}`, false, true));
-    const t = new Date(), stamp = `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`;
-    const a = el('a'); a.href = URL.createObjectURL(blob); a.download = `${root}-${stamp}.zip`; document.body.append(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 20000);
-    setStatus(`✓ Export: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
+    const how = await deliverFile(blob, `${root}_${zipStamp()}.zip`);
+    setStatus(how === 'abort' ? 'Nicht gesichert (abgebrochen)' : `✓ Gesichert: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
   } catch (err){ setStatus('FEHLER beim Export', true); alert('Export fehlgeschlagen:\n' + err.message); }
   finally { setTimeout(() => adm.classList.remove('show'), 5000); }
 }
@@ -2289,6 +2301,24 @@ async function unlockWeb(cfg){
   });
 }
 
+/* ----- Exportieren: ein Fenster mit allen Möglichkeiten (zum Weiterarbeiten dient «Sichern») ----- */
+function openExportDialog(){
+  if (!S.data || WEB) return;
+  const sh = $('#pdfsheet');
+  sh.innerHTML = `<button class="sheet-x" id="x-x" aria-label="Schliessen">✕</button><h2>Exportieren</h2>
+    <div class="hintline">Exporte sind zum Ansehen, Drucken und Veröffentlichen gedacht, nicht zum Weiterarbeiten. Zum Weiterarbeiten «Sichern» verwenden.</div>
+    <div class="xopts">
+      <button type="button" class="xopt" id="x-pdf"><b>PDF</b><span>Eine Seite A4 quer, zum Drucken oder Abgeben.</span></button>
+      <button type="button" class="xopt" id="x-a1"><b>PDF als Plakat (A1)</b><span>Grosses Format, Bilder in voller Auflösung.</span></button>
+      <button type="button" class="xopt" id="x-web"><b>Webseite (nur ansehen)</b><span>Zip-Datei für GitHub Pages, auf Wunsch mit Passwort.</span></button>
+    </div>
+    <div class="actions"><span class="sp"></span><button class="btn" id="x-cancel">Abbrechen</button></div>`;
+  $('#x-x').onclick = $('#x-cancel').onclick = () => $('#pdfdlg').hidden = true;
+  $('#x-pdf').onclick = () => openPdfDialog('a4');
+  $('#x-a1').onclick = () => openPdfDialog('a1');
+  $('#x-web').onclick = () => openWebDialog();
+  $('#pdfdlg').hidden = false;
+}
 /* ----- Dialog zum Export ----- */
 function openWebDialog(){
   if (!S.data || WEB) return;
@@ -2358,7 +2388,7 @@ async function exportWeb(selfHtml = SELF, pw = null){
     } else for (const d of data) entries.push({ path:'daten/' + d.key, blob:d.blob });
     const root = (slug(titel) || 'zeitstrahl') + '-web';
     const blob = await buildZip(root, entries, (i, n) => setStatus(`Export … ${i}/${n}`, false, true));
-    downloadBlob(blob, `${root}-${stampNow()}.zip`);
+    downloadBlob(blob, `${root}_webseite_${stampNow()}.zip`);
     setStatus(`✓ Export als Webseite${pw ? ' (mit Passwort)' : ''}: ${entries.length} Dateien, ${(blob.size / 1048576).toFixed(1)} MB`);
     if (entries.length > 100) alert(`Der Export enthält ${entries.length} Dateien. GitHub nimmt über die Weboberfläche höchstens 100 Dateien pro Vorgang an: bitte in mehreren Etappen hochladen (Anleitung in LIES-MICH.txt).`);
   } catch (err){ setStatus('FEHLER beim Export', true); alert('Export fehlgeschlagen:\n' + err.message); }
@@ -2482,12 +2512,14 @@ $('#mSettings').onclick = () => { $('#menu').hidden = true; openSettings(); };
 $('#mStories').onclick = () => { $('#menu').hidden = true; openStories(); };
 $('#mInfobox').onclick = () => { $('#menu').hidden = true; showInfobox(); };
 $('#mMarks').onclick = () => { $('#menu').hidden = true; toggleMarks(); };
-$('#mExport').onclick = () => { $('#menu').hidden = true; exportZip(); };
-$('#mWeb').onclick = () => { $('#menu').hidden = true; openWebDialog(); };
-$('#mPdf').onclick = () => { $('#menu').hidden = true; openPdfDialog('a4'); };
-$('#mPdfA1').onclick = () => { $('#menu').hidden = true; openPdfDialog('a1'); };
-$('#mSave').onclick = () => { $('#menu').hidden = true; saveFile(); };
+$('#mExportAll').onclick = () => { $('#menu').hidden = true; openExportDialog(); };
 $('#btnSave').onclick = saveFile;
+/* Strg+S bzw. ⌘S: Sichern (statt «Seite speichern» des Browsers) */
+document.addEventListener('keydown', ev => {
+  if (!(ev.metaKey || ev.ctrlKey) || ev.altKey || (ev.key !== 's' && ev.key !== 'S') || WEB || !S.src || !S.data) return;
+  ev.preventDefault();
+  if ($('#editor').hidden && $('#settings').hidden && $('#setupdlg').hidden && (S.src.fileMode || S.src.demo)) saveFile();
+});
 $('#mTheme').onclick = () => { $('#menu').hidden = true; toggleTheme(); };
 $('#mFs').onclick = () => { $('#menu').hidden = true; toggleFs(); };
 
@@ -2646,7 +2678,7 @@ async function unzipBlob(blob){
   }
   const clean = raw.filter(e => !e.name.endsWith('/') && !/(^|\/)(__MACOSX|\.DS_Store)(\/|$)/.test(e.name) && !/(^|\/)\._/.test(e.name));
   const j = clean.filter(e => /(^|\/)zeitstrahl\.json$/.test(e.name)).sort((a, b) => a.name.split('/').length - b.name.split('/').length)[0];
-  if (!j) throw new Error('In dieser Zip-Datei fehlt die Datei zeitstrahl.json. Ist es eine Zip aus «Exportieren für Backup»?');
+  if (!j) throw new Error(clean.some(e => /(^|\/)index\.html$/.test(e.name)) ? 'Das ist ein Webseiten-Export (nur zum Ansehen), kein Zeitstrahl zum Weiterarbeiten. Bitte die Zip-Datei öffnen, die mit «Sichern» entstanden ist.' : 'In dieser Zip-Datei fehlt die Datei zeitstrahl.json. Bitte die Zip-Datei öffnen, die mit «Sichern» entstanden ist.');
   const prefix = j.name.slice(0, j.name.length - 'zeitstrahl.json'.length), files = new Map();
   for (const e of clean){
     if (!e.name.startsWith(prefix)) continue;
@@ -2656,7 +2688,7 @@ async function unzipBlob(blob){
     const start = e.off + 30 + lh.getUint16(26, true) + lh.getUint16(28, true), type = mimeOf(rel);
     if (e.method === 0) files.set(rel, blob.slice(start, start + e.csize, type));
     else if (e.method === 8){
-      if (typeof DecompressionStream === 'undefined') throw new Error('Dieser Browser kann komprimierte Zip-Dateien nicht lesen. Bitte eine Zip aus «Exportieren für Backup» verwenden.');
+      if (typeof DecompressionStream === 'undefined') throw new Error('Dieser Browser kann komprimierte Zip-Dateien nicht lesen. Bitte eine Zip-Datei verwenden, die mit «Sichern» entstanden ist.');
       const out = await new Response(blob.slice(start, start + e.csize).stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
       files.set(rel, new Blob([out], { type }));
     } else throw new Error('Nicht unterstütztes Zip-Format (Methode ' + e.method + ').');
@@ -2677,7 +2709,7 @@ const NEW_TXT = {
   einfach:'Zeitachse nach Jahren mit vorbereiteten Kategorien.',
   erweitert:'Zeitachse nach Jahren oder Stationen (z.B. Kapitel, Lernphasen) mit Vorlagen für Kategorien.'
 };
-const newTxt = m => NEW_TXT[m] + (window.showDirectoryPicker ? ' Gespeichert wird in einem leeren Ordner.' : ' Gesichert wird als Zip-Datei.');
+const newTxt = m => NEW_TXT[m] + ' Gesichert wird als Zip-Datei.';
 function setMode(adv){
   ADV = !!adv; $('#welcome').classList.toggle('adv', ADV);
   document.querySelectorAll('#wSeg button').forEach(b => b.classList.toggle('on', (b.dataset.m === 'erweitert') === ADV));
@@ -2761,20 +2793,13 @@ async function newInMemory(){
   const files = new Map([['zeitstrahl.json', new Blob([JSON.stringify(data, null, 2)], { type:'application/json' })]]);
   return loadFrom(new ZipSource(data.titel, files)).then(() => { S.dirty = true; updateFileStatus(); scheduleZip(); scheduleDraft(); });
 }
-/* Neu anlegen: Setup, dann (mit Ordnerzugriff) einen leeren Ordner wählen, sonst im Arbeitsspeicher (Zip) */
-async function startNew(){
-  if (!window.showDirectoryPicker) return newInMemory();
-  const data = await openSetup('Mein Zeitstrahl', 'Danach ist ein leerer Ordner auszuwählen, in dem der Zeitstrahl gespeichert wird.'); if (!data) return;
-  let h; try { h = await showDirectoryPicker({ mode:'readwrite' }); } catch { return; }
-  const src = new DirSource(h); let has = true; try { await src.text('zeitstrahl.json'); } catch { has = false; }
-  if (has){ alert('In diesem Ordner gibt es schon einen Zeitstrahl. Bitte einen leeren Ordner wählen (oder «Ordner öffnen …» verwenden).'); return; }
-  await src.write('zeitstrahl.json', JSON.stringify(data, null, 2)); await idbSet('last', h); loadFrom(src);
-}
+/* Neu anlegen: ab 2.6 immer im Arbeitsspeicher; gesichert wird als Zip-Datei (einheitlich auf allen Geräten) */
+function startNew(){ return newInMemory(); }
 function updateFileStatus(){
   if (!S.src || !S.src.fileMode) return;
   const fs = $('#fileStatus');
-  if (S.dirty){ fs.textContent = '● Ungesichert'; fs.className = 'dirty'; }
-  else if (S.savedAt){ fs.textContent = '✓ Gesichert ' + S.savedAt.toTimeString().slice(0, 5); fs.className = ''; }
+  if (S.dirty){ fs.textContent = '● Ungesichert'; fs.className = 'dirty'; fs.title = 'Ungesichert'; }
+  else if (S.savedAt){ fs.textContent = (S.savedHow === 'download' ? '✓ Heruntergeladen ' : '✓ Gesichert ') + S.savedAt.toTimeString().slice(0, 5); fs.className = ''; fs.title = fs.textContent.slice(2); }
   else { fs.textContent = ''; fs.className = ''; }
   $('#btnSave').className = 'btn' + (S.dirty ? ' primary' : '');
 }
@@ -2786,29 +2811,40 @@ async function prepareZip(){
   const ver = ++S.zipVer; await saveChain;
   const entries = []; for (const path of (await src.list()).sort()) entries.push({ path, blob: await src.file(path) });
   const root = slug(S.data.titel || src.name) || 'zeitstrahl', blob = await buildZip(root, entries);
-  if (ver === S.zipVer && S.src === src) S.zipReady = { blob, name: `zeitstrahl-${root}.zip` };
+  if (ver === S.zipVer && S.src === src) S.zipReady = { blob, root };
   return S.zipReady;
 }
+/* Dateiname mit Datum und Uhrzeit, z.B. epochen_2026-11-24_14-05.zip: die neueste Datei ist leicht zu finden */
+const zipStamp = () => { const t = new Date(); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}_${pad2(t.getHours())}-${pad2(t.getMinutes())}`; };
+/* Ausliefern: iPad über das Teilen-Menü; Chrome/Edge mit «Speichern unter» (Abbruch wird erkannt); sonst als Download (Abbruch nicht erkennbar) */
 async function deliverFile(blob, name){
   const f = new File([blob], name, { type:'application/zip' });
   if (matchMedia('(hover:none)').matches && navigator.canShare && navigator.canShare({ files:[f] })){
     try { await navigator.share({ files:[f], title:name }); return 'share'; }
     catch (e){ if (e && e.name === 'AbortError') return 'abort'; if (e && e.name === 'NotAllowedError') return 'blocked'; }
   }
+  if (window.showSaveFilePicker){
+    let h = null;
+    try { h = await showSaveFilePicker({ suggestedName:name, types:[{ description:'Zeitstrahl (Zip-Datei)', accept:{ 'application/zip':['.zip'] } }] }); }
+    catch (e){ if (e && e.name === 'AbortError') return 'abort'; }      // anderer Fehler (z.B. Dialog nicht erlaubt): weiter als Download
+    if (h){ const w = await h.createWritable(); await w.write(blob); await w.close(); return 'saved'; }
+  }
   const a = el('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 30000);
   return 'download';
 }
 async function saveFile(){
+  if (S.src && S.src.demo && !S.src.fileMode) return exportZip();     // Beispiel: als eigene Zip-Datei sichern
   if (!S.src || !S.src.fileMode) return;
   const b = $('#btnSave');
   try {
     await saveChain;
     if (!S.zipReady){ b.disabled = true; b.textContent = 'Wird vorbereitet …'; try { await prepareZip(); } finally { b.disabled = false; b.textContent = 'Sichern'; } }
     const z = S.zipReady; if (!z) throw new Error('Die Datei konnte nicht vorbereitet werden.');
-    const how = await deliverFile(z.blob, z.name);
+    const how = await deliverFile(z.blob, `${z.root}_${zipStamp()}.zip`);
     if (how === 'blocked'){ setStatus('Datei ist bereit: bitte nochmals «Sichern» tippen', false, true); return; }
-    if (how !== 'abort'){ S.dirty = false; S.savedAt = new Date(); setStatus(''); persistDraft(); }
+    if (how === 'abort'){ setStatus('Nicht gesichert (abgebrochen)'); }
+    else { S.dirty = false; S.savedAt = new Date(); S.savedHow = how; setStatus(''); persistDraft(); }
     updateFileStatus();
   } catch (err){ b.disabled = false; b.textContent = 'Sichern'; setStatus('FEHLER beim Sichern', true); alert('Sichern fehlgeschlagen:\n' + err.message); }
 }
@@ -2826,12 +2862,20 @@ addEventListener('pagehide', persistDraft);
 addEventListener('beforeunload', ev => { if (S.src && S.src.fileMode && S.dirty){ ev.preventDefault(); ev.returnValue = ''; } });
 
 /* ========== Start / Ordner öffnen ========== */
+/* Ordner öffnen (Zeitstrahlen aus Versionen vor 2.6): wird eingelesen, weitergearbeitet und gesichert wird wie mit einer Zip-Datei */
 async function openFolder(){
   if (!window.showDirectoryPicker){ $('#dirInput').click(); return; }
-  let h; try { h = await showDirectoryPicker({ mode:'readwrite' }); } catch { return; }
-  await idbSet('last', h); loadFrom(new DirSource(h));
+  let h; try { h = await showDirectoryPicker({ mode:'read' }); } catch { return; }
+  importFolder(new DirSource(h));
 }
-$('#dirInput').onchange = ev => { const f = [...ev.target.files]; if (f.length) loadFrom(new ListSource(f)); ev.target.value = ''; };
+async function importFolder(src){
+  try {
+    const files = new Map(); for (const p of await src.list()) files.set(p, await src.file(p));
+    if (!files.has('zeitstrahl.json')){ alert(`In «${src.name}» wurde keine Datei zeitstrahl.json gefunden.`); return; }
+    await loadFrom(new ZipSource(src.name, files));
+  } catch (err){ alert('Der Ordner konnte nicht gelesen werden:\n' + err.message); }
+}
+$('#dirInput').onchange = ev => { const f = [...ev.target.files]; if (f.length) importFolder(new ListSource(f)); ev.target.value = ''; };
 $('#btnOpen').onclick = openFolder;
 $('#btnDemo').onclick = () => loadFrom(new DemoSource(DEMO));
 $('#btnDemo2').onclick = () => loadFrom(new DemoSource(DEMO2));
@@ -2847,22 +2891,10 @@ $('#btnNew').onclick = startNew;
   const canFolder = !!window.showDirectoryPicker, ios = isIOS();
   setMode(false);
   $('#woFolder').hidden = ios && !canFolder;                  // das iPad kennt keinen Ordnerzugriff
-  $('#wdFolder').innerHTML = canFolder
-    ? 'Zeitstrahl aus einem Ordner öffnen. Änderungen werden <b>automatisch im Ordner gespeichert</b>. Nur mit Chrome oder Edge am Computer.'
-    : 'In diesem Browser ist der Ordner nur <b>lesbar</b>. Zum Bearbeiten die Zip-Datei verwenden oder Chrome bzw. Edge am Computer.';
+  $('#wdFolder').innerHTML = 'Zeitstrahl aus einem Ordner öffnen. Weitergearbeitet und gesichert wird danach als <b>Zip-Datei</b>.';
   if (ios) $('#warn').textContent = 'Sichern auf dem iPad über das Teilen-Menü (Dateien, OneDrive, Teams).';
   const h = await idbGet('last');
   document.querySelectorAll('.exfaces').forEach(f => { (f.dataset.k || '').split(',').filter(Boolean).forEach(k => { const u = DEMO_IMG['bilder/' + k + '.webp']; if (!u) return; const im = el('img'); im.alt = ''; im.src = u; if (k === 'veitsdom' || k === 'crash') im.className = 'sq'; f.append(im); }); });
-  if (h && h.kind === 'directory'){
-    const b = $('#btnLast'); b.querySelector('span').textContent = h.name; b.hidden = false;
-    b.onclick = async () => {
-      try {
-        let p = await h.queryPermission({ mode:'readwrite' });
-        if (p !== 'granted') p = await h.requestPermission({ mode:'readwrite' });
-        if (p === 'granted') loadFrom(new DirSource(h));
-      } catch (err){ alert('Ordner nicht mehr erreichbar. Bitte neu auswählen.'); }
-    };
-  }
   const dr = await idbGet('entwurf');
   if (dr && Array.isArray(dr.files) && dr.files.length){
     const b = $('#btnDraft'); b.querySelector('span').textContent = `«${dr.titel || dr.name}», ${ago(dr.at)}${dr.dirty ? ' (ungesichert)' : ''}`; b.hidden = false; $('#btnDraftX').hidden = false;
